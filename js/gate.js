@@ -6,7 +6,7 @@
 (() => {
   const HASH = '8fd47b61b74febb897b790c075264ab31fa309ebaed47827ab01597f9b3e2b30';
   const SALT = 'yokdil-kelime-v1';
-  const APP = ['js/store.js', 'js/parser.js', 'js/tts.js', 'js/layout.js', 'js/fixer.js', 'js/ocr.js', 'js/app.js'];
+  const APP = ['js/store.js', 'js/parser.js', 'js/tts.js', 'js/layout.js', 'js/fixer.js', 'js/ocr.js', 'js/sync.js', 'js/app.js'];
   const KEY = 'yokdil.gate';
   const local = /^(localhost|127\.0\.0\.1|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(location.hostname);
   const forced = /[?&]gate=1\b/.test(location.search); // deneme için: kapıyı zorla göster

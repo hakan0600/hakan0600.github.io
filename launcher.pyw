@@ -1,6 +1,7 @@
 """YÖKDİL Kelime masaüstü başlatıcısı: küçük yerel sunucuyu gizli başlatır, Edge'i uygulama penceresinde açar, pencere kapanınca çıkar."""
 import ctypes
 import http.server
+import glob
 import json
 import os
 import socket
@@ -105,7 +106,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return
         SYNC_FILE.parent.mkdir(exist_ok=True)
         SYNC_FILE.write_bytes(data)
-        body = json.dumps({"ok": True, "n": n}).encode()
+        gid, err = publish_gist()
+        body = json.dumps({"ok": True, "n": n, "gist": gid, "gistError": err}).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
@@ -151,6 +153,43 @@ def server_ready():
             return "YÖKDİL" in r.read().decode("utf-8", "ignore")
     except OSError:
         return False
+
+
+def find_gh():
+    """GitHub CLI (gh) yolu: PATH'te ya da winget kurulumunda."""
+    import shutil
+    found = shutil.which("gh")
+    if found:
+        return found
+    hits = glob.glob(os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\WinGet\Packages\GitHub.cli_*\bin\gh.exe"))
+    return hits[0] if hits else None
+
+
+GIST_FILE = "yokdil-kelimeler.json"
+
+
+def publish_gist():
+    """Aktarma kutusunu GitHub hesabında GİZLİ bir gist'e yazar (her ağdan, adresi bilen alabilir). Dönüş: (gist_id, hata)."""
+    gh = find_gh()
+    if not gh:
+        return None, "GitHub CLI (gh) bulunamadı"
+    idf = SYNC_FILE.parent / "gist.id"
+    content = SYNC_FILE.read_text(encoding="utf-8")
+    files = {"files": {GIST_FILE: {"content": content}}}
+    def call(method, path, body):
+        return subprocess.run([gh, "api", "-X", method, path, "--input", "-"], input=json.dumps(body).encode("utf-8"),
+                              capture_output=True, timeout=90, creationflags=NO_WINDOW)
+    if idf.exists():
+        gid = idf.read_text().strip()
+        r = call("PATCH", f"gists/{gid}", files)
+        if r.returncode == 0:
+            return gid, None
+    r = call("POST", "gists", {"description": "YÖKDİL Kelime yedeği (gizli bağlantı)", "public": False, **files})
+    if r.returncode != 0:
+        return None, (r.stderr or r.stdout).decode("utf-8", "ignore").strip()[:200]
+    gid = json.loads(r.stdout.decode("utf-8"))["id"]
+    idf.write_text(gid)
+    return gid, None
 
 
 def read_sync():

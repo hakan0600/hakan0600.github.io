@@ -1,6 +1,7 @@
 'use strict';
 
-const APP_VERSION = 10; // version.json ile aynı tutulur; farklıysa pencere kendini yeniler
+const APP_VERSION = 12;
+const HOSTED_URL = 'https://hakan0600.github.io/'; // bulut bağlantısı bu adrese açılır // version.json ile aynı tutulur; farklıysa pencere kendini yeniler
 
 /* ================= Yardımcılar ================= */
 const $ = (s, el = document) => el.querySelector(s);
@@ -1087,59 +1088,65 @@ function voiceOptions(lang, chosen) {
   return `<option value="">Otomatik (en iyisi)</option>` + vs.map(v => `<option value="${esc(v.voiceURI)}"${selAttr(chosen, v.voiceURI)}>${esc(v.name)}</option>`).join('');
 }
 
-/** Bilgisayardaki başlatıcı yerel ağ adresini verir; telefonda kullanım adımlarını gösterir. */
+/** Eşitleme durumu ve eşleştirme bağlantısı (Ayarlar). */
 async function showPhoneHelp() {
   const box = $('#lan-box');
   if (!box) return;
-  const onLan = /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(location.hostname);
-  if (!onLan && !/^(127\.0\.0\.1|localhost)$/.test(location.hostname)) return; // internetteki (barındırılan) sürüm
-  if (onLan) {
-    // Telefon (adres bilgisayarın ağ adresi): bilgisayardan gönderilen kelimeleri al
-    box.hidden = false;
-    box.innerHTML = `<h2>💻 Bilgisayardaki kelimelerim</h2>
-      <p class="small">Önce bilgisayardaki uygulamada <b>Ayarlar → Kelimelerimi telefona gönder</b>'e bas, sonra buradan al.</p>
-      <button class="btn primary wide" data-act="pull-pc">📥 Kelimeleri bilgisayardan al</button>
-      <p class="small muted" style="margin-top:10px">İnternetteki sürüme aktaracaksan: <a href="__yedek" download>yedeği dosya olarak indir</a>, sonra o sürümde Ayarlar → Yedeği yükle.</p>`;
+  const info = Sync.info();
+  const when = t => (t ? new Date(t).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '—');
+  box.hidden = false;
+  if (info.role === 'pc') {
+    const link = info.pairId ? `${HOSTED_URL}#al=${info.pairId}` : '';
+    let lan = '';
+    try {
+      const { ip, port } = await (await fetch('__lan', { cache: 'no-store' })).json();
+      if (ip && ip !== '127.0.0.1') lan = `http://${ip}:${port}`;
+    } catch (e) { /* başlatıcı yok */ }
+    box.innerHTML = `<h2>🔄 Telefonlarla otomatik eşitleme</h2>
+      <p class="small">Bilgisayarda eklediğin, düzelttiğin, sildiğin her kelime birkaç saniye içinde <b>eşleştirilmiş cihazlara</b> kendiliğinden gider. Her telefonda yalnızca <b>bir kez</b> eşleştirme gerekir.</p>
+      <p class="small">Durum: ${info.error ? `⚠️ ${esc(info.error)}` : (info.last ? `✅ son gönderim ${when(info.last)}` : (info.pairId ? '✅ hazır' : 'henüz gönderilmedi'))}</p>
+      ${link ? `<p class="small"><b>Telefonu eşleştirmek için</b> bu bağlantıyı telefonda bir kez aç (ya da masaüstündeki <i>YOKDIL Eslestirme QR.png</i>'yi okut):</p>
+          <p style="word-break:break-all;font-weight:700;user-select:all">${esc(link)}</p>
+          <div class="row"><button class="btn primary grow" data-act="copy-link" data-link="${esc(link)}">📋 Bağlantıyı kopyala</button><button class="btn grow" data-act="sync-now">Şimdi gönder</button></div>
+          <p class="small muted">Bu bağlantı bir anahtardır: bilen herkes kelime listeni okuyabilir. Başkasına verme.</p>`
+        : '<button class="btn primary wide" data-act="sync-now">İlk gönderimi şimdi yap</button>'}
+      ${lan ? `<details><summary>Aynı Wi-Fi'de doğrudan bilgisayara bağlanmak (isteğe bağlı)</summary>
+          <p class="small">Adres: <b style="user-select:all">${esc(lan)}</b></p>
+          <ol class="small" style="padding-left:20px;margin:8px 0">
+            <li>Bilgisayarda <b>telefon_izni.bat</b>'ı bir kez çalıştır.</li>
+            <li>Telefonda Chrome'a <b>chrome://flags</b> yaz → "<i>Insecure origins treated as secure</i>" → adresi ekle → Enabled → Relaunch.</li>
+            <li>Adresi aç → menü ⋮ → <b>Uygulamayı yükle</b>.</li></ol></details>` : ''}`;
     return;
   }
-  try {
-    const { ip, port } = await (await fetch('__lan', { cache: 'no-store' })).json();
-    if (!ip || ip === '127.0.0.1') return;
-    const url = `http://${ip}:${port}`;
-    box.hidden = false;
-    box.innerHTML = `<h2>📱 Telefonda kullan (aynı Wi-Fi)</h2>
-      <p class="small">Telefon ve bilgisayar aynı Wi-Fi'de olsun. Telefonun adresi:</p>
-      <p style="font-size:1.15rem;font-weight:800;user-select:all;margin:6px 0">${esc(url)}</p>
-      <ol class="small" style="padding-left:20px;margin:8px 0">
-        <li>Bilgisayarda <b>telefon_izni.bat</b> dosyasına bir kez çift tıkla, "Evet" de (güvenlik duvarı izni).</li>
-        <li>Telefonda Chrome'a <b>chrome://flags</b> yaz, "<i>Insecure origins treated as secure</i>" ara.</li>
-        <li>Kutuya <b>${esc(url)}</b> yaz, <b>Enabled</b> seç, <b>Relaunch</b>.</li>
-        <li>Chrome'da bu adresi aç → menü ⋮ → <b>Uygulamayı yükle</b>.</li>
-        <li>Bir kez açılınca dosyalar telefona iner; sonra bilgisayar kapalıyken de çalışır.</li>
-      </ol>
-      <button class="btn primary wide" data-act="push-phone" style="margin:8px 0">📤 Kelimelerimi telefona gönder</button>
-      <p class="small muted">Bilgisayarın adresi değişirse telefondaki uygulama boş açılır: kelimelerini önce <b>Yedeği indir</b> ile sakla.</p>`;
-  } catch (e) { /* başlatıcı dışında (ör. barındırılan sürüm) gösterilmez */ }
+  box.innerHTML = `<h2>🔄 Bilgisayarla otomatik eşitleme</h2>` + (info.cloudId
+    ? `<p class="small">✅ Açık. Bilgisayara eklediğin kelimeler bu cihaza kendiliğinden gelir. Son kontrol: ${when(info.last)}${info.error ? ` · ⚠️ ${esc(info.error)}` : ''}</p>
+       <div class="row"><button class="btn grow" data-act="sync-now">Şimdi kontrol et</button><button class="btn grow" data-act="sync-off">Kapat</button></div>`
+    : `<p class="small">Kapalı. Açmak için bilgisayardaki uygulamanın Ayarlar bölümünde görünen <b>eşleştirme bağlantısını bu cihazda bir kez aç</b> (ya da aşağıya yapıştır).</p>`);
 }
 
-/** Bilgisayar → telefon aktarımı (başlatıcının posta kutusu üzerinden). */
-async function pushToPhone() {
-  try {
-    const r = await fetch('__sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: Store.exportJSON() });
-    const { n } = await r.json();
-    toast(`${n} kelime telefona hazır. Telefonda Ayarlar → Kelimeleri bilgisayardan al`, 5000);
-  } catch (e) { toast('Gönderilemedi: uygulamayı masaüstü kısayolundan açtığından emin ol', 5000); }
+const gistIdOf = text => (String(text || '').match(/[0-9a-f]{20,40}/i) || [])[0] || '';
+
+/** Bu cihazı bilgisayarla eşleştir: bir kez yapılır, sonra her şey kendiliğinden akar. */
+async function pairDevice(id) {
+  if (Sync.role === 'pc') return toast('Bu bilgisayar ana kaynak; eşleştirmeye gerek yok');
+  Store.setSetting('cloudId', id);
+  closeModal();
+  await Sync.pull(true);
 }
 
-async function pullFromPc() {
-  try {
-    const r = await fetch('__sync', { cache: 'no-store' });
-    if (!r.ok) return toast('Bilgisayardan gönderilmiş kelime yok. Önce bilgisayarda "Kelimelerimi telefona gönder"e bas.', 5000);
-    const added = Store.importJSON(await r.text());
-    closeModal();
-    route();
-    toast(added ? `${added} yeni kelime alındı (toplam ${Store.all().length})` : `Yeni kelime yok: ${Store.all().length} kelimenin hepsi zaten bu cihazda`, 5000);
-  } catch (e) { toast('Bilgisayara ulaşılamadı: aynı Wi-Fi\'de misin, uygulama bilgisayarda açık mı?', 5000); }
+/** Uygulama #al=<kod> ile açıldıysa eşleştirmeyi öner. */
+function checkCloudLink() {
+  const id = gistIdOf((location.hash.match(/^#al=(.+)$/) || [])[1]);
+  if (!id) return;
+  history.replaceState(null, '', location.pathname + location.search); // kod adres çubuğunda kalmasın
+  if (Sync.role === 'pc') return;
+  openModal(`<h2>🔄 Bilgisayarla eşleştir</h2><div class="stack">
+      <p>Bu cihaz bilgisayarla eşleştirilsin mi? Bundan sonra bilgisayarda eklediğin kelimeler burada <b>kendiliğinden</b> görünür; hiçbir şeye basman gerekmez. Bu cihazdaki "bildim" ilerlemen korunur.</p>
+      <button class="btn primary wide" data-act="cloud-yes">Eşleştir</button>
+      <button class="btn wide" data-act="cancel">Vazgeç</button></div>`, a => {
+    if (a === 'cancel') closeModal();
+    else if (a === 'cloud-yes') pairDevice(id);
+  });
 }
 
 function openSettings() {
@@ -1155,12 +1162,15 @@ function openSettings() {
       <div class="row"><button class="btn grow" data-act="export">⬇️ Yedeği indir</button><button class="btn grow" data-act="import">⬆️ Yedeği yükle</button></div>
       <input type="file" id="s-file" accept="application/json,.json" hidden>
       <div id="lan-box" hidden></div>
+      <h2>Eşleştirme bağlantısı yapıştır</h2>
+      <p class="small muted">Bilgisayardaki uygulamanın Ayarlar bölümünde yazan eşleştirme bağlantısını ya da kodunu yapıştır. Bir kez yeter, her ağdan çalışır.</p>
+      <div class="row"><input type="text" id="cloud-in" class="grow" placeholder="Bağlantı ya da kod" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn primary" data-act="pull-cloud">Al</button></div>
       <h2>Uygulama</h2>
       ${installPrompt ? '<button class="btn primary wide" data-act="install">📲 Uygulamayı yükle</button>' : '<p class="muted small">Yüklemek için: Edge/Chrome menüsü → "Uygulamayı yükle" (bilgisayar) veya "Ana ekrana ekle" (telefon). iPhone: Paylaş → Ana Ekrana Ekle.</p>'}
       ${Store.canPersist() ? '' : '<div class="notice">Bu tarayıcı veri saklamayı engelliyor; kapatınca kelimeler kaybolur. Gizli pencere kullanmıyorsan site verisi iznini kontrol et.</div>'}
       <button class="btn bad wide" data-act="wipe">Tüm kelimeleri sil</button>
       <button class="btn wide" data-act="cancel">Kapat</button>
-    </div>`, a => {
+    </div>`, (a, el) => {
     if (a === 'cancel') closeModal();
     else if (a === 'test-en') TTS.speak('abandon', 'en');
     else if (a === 'test-tr') TTS.speak('terk etmek, vazgeçmek', 'tr');
@@ -1173,8 +1183,10 @@ function openSettings() {
       setTimeout(() => URL.revokeObjectURL(link.href), 2000);
     } else if (a === 'import') $('#s-file').click();
     else if (a === 'install') { installPrompt.prompt(); installPrompt = null; closeModal(); }
-    else if (a === 'push-phone') pushToPhone();
-    else if (a === 'pull-pc') pullFromPc();
+    else if (a === 'sync-now') { if (Sync.role === 'pc') Sync.push(true).then(() => { showPhoneHelp(); toast(Sync.info().error ? 'Gönderilemedi' : 'Gönderildi'); }); else Sync.pull(true).then(showPhoneHelp); }
+    else if (a === 'sync-off') { Store.setSetting('cloudId', ''); showPhoneHelp(); toast('Eşitleme kapatıldı'); }
+    else if (a === 'copy-link') navigator.clipboard?.writeText(el.dataset.link).then(() => toast('Bağlantı kopyalandı'), () => toast('Kopyalanamadı, bağlantıyı elle seç'));
+    else if (a === 'pull-cloud') { const id = gistIdOf($('#cloud-in').value); id ? pairDevice(id) : toast('Geçerli bir bağlantı ya da kod yapıştır'); }
     else if (a === 'wipe' && confirm('Tüm kelimeler ve ilerleme silinsin mi? Bu geri alınamaz.')) {
       Store.clear();
       closeModal();
@@ -1229,11 +1241,14 @@ document.addEventListener('keydown', e => {
   current.key?.(e);
 });
 window.addEventListener('hashchange', route);
+window.addEventListener('hashchange', checkCloudLink);
 
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   navigator.serviceWorker.register('sw.js').catch(() => { /* çevrimdışı önbellek olmadan da çalışır */ });
 }
 route();
+checkCloudLink();
+Sync.start();
 
 /* Kod güncellenince açık pencere kendini yeniler (kullanıcının pencereyi kapatıp açmasına gerek kalmasın) */
 $('#ver').textContent = `v${APP_VERSION}`;
