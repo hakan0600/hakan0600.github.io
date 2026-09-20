@@ -7,6 +7,8 @@ const Sync = (() => {
   const st = { last: 0, error: '' };
   let timer = 0;
   let busy = false;
+  let etag = '';
+  let etagFor = '';
 
   const hashOf = text => { let h = 5381; for (let i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) | 0; return String(h); };
   const words = () => Store.all().map(w => ({ en: w.en, tr: w.tr, list: w.list }));
@@ -50,8 +52,14 @@ const Sync = (() => {
     if (role === 'pc' || !id || busy) return;
     busy = true;
     try {
-      const r = await fetch(`https://api.github.com/gists/${id}`, { headers: { Accept: 'application/vnd.github+json' } });
-      if (!r.ok) throw new Error(r.status === 404 ? 'bağlantı geçersiz' : `GitHub yanıtı ${r.status}`);
+      // GitHub yanıtları tarayıcıda 60 sn önbelleklenir: önbelleği atla, ETag ile koşullu iste (304 kotadan düşmez)
+      const headers = { Accept: 'application/vnd.github+json' };
+      if (etag && etagFor === id && !loud) headers['If-None-Match'] = etag;
+      const r = await fetch(`https://api.github.com/gists/${id}`, { headers, cache: 'no-store' });
+      if (r.status === 304) { st.last = Date.now(); st.error = ''; return; }
+      if (!r.ok) throw new Error(r.status === 404 ? 'bağlantı geçersiz' : (r.status === 403 ? 'GitHub istek sınırı doldu, biraz sonra denenecek' : `GitHub yanıtı ${r.status}`));
+      etag = r.headers.get('ETag') || '';
+      etagFor = id;
       const g = await r.json();
       const f = g.files && (g.files['yokdil-kelimeler.json'] || Object.values(g.files)[0]);
       if (!f) throw new Error('bağlantıda kelime dosyası yok');
@@ -81,7 +89,7 @@ const Sync = (() => {
       return;
     }
     setTimeout(() => pull(), 1500);
-    setInterval(() => { if (document.visibilityState === 'visible') pull(); }, 3 * 60000);
+    setInterval(() => { if (document.visibilityState === 'visible') pull(); }, 2 * 60000);
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pull(); });
   }
 
