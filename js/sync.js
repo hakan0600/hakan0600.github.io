@@ -55,7 +55,7 @@ const Sync = (() => {
       // GitHub yanıtları tarayıcıda 60 sn önbelleklenir: önbelleği atla, ETag ile koşullu iste (304 kotadan düşmez)
       const headers = { Accept: 'application/vnd.github+json' };
       if (etag && etagFor === id && !loud) headers['If-None-Match'] = etag;
-      const r = await fetch(`https://api.github.com/gists/${id}`, { headers, cache: 'no-store' });
+      const r = await fetch(`https://api.github.com/gists/${id}?t=${Date.now()}`, { headers, cache: 'no-store' }); // ?t: GitHub'ın 60 sn'lik uç önbelleğini atlar
       if (r.status === 304) { st.last = Date.now(); st.error = ''; return; }
       if (!r.ok) throw new Error(r.status === 404 ? 'bağlantı geçersiz' : (r.status === 403 ? 'GitHub istek sınırı doldu, biraz sonra denenecek' : `GitHub yanıtı ${r.status}`));
       etag = r.headers.get('ETag') || '';

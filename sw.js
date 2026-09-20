@@ -2,7 +2,7 @@
    - Kabuk (küçük dosyalar): her sürümde yenilenir, önce ağ (güncel kalsın), ağ yoksa önbellek.
    - Vendor (OCR motoru, dil dosyaları, sözlük; ~21 MB): ayrı, kalıcı önbellek. Kurulurken bir kez iner,
      sürüm güncellemelerinde yeniden indirilmez (telefon verisi harcanmasın). */
-const SHELL_CACHE = 'yokdil-shell-v13';
+const SHELL_CACHE = 'yokdil-shell-v14';
 const VENDOR_CACHE = 'yokdil-vendor-v1';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',

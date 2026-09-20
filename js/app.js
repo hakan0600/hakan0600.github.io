@@ -1,6 +1,6 @@
 'use strict';
 
-const APP_VERSION = 13;
+const APP_VERSION = 14;
 const HOSTED_URL = 'https://hakan0600.github.io/'; // bulut bağlantısı bu adrese açılır // version.json ile aynı tutulur; farklıysa pencere kendini yeniler
 
 /* ================= Yardımcılar ================= */
