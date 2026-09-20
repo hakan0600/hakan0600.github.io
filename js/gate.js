@@ -4,7 +4,7 @@
    ve tesadüfi ziyaretçileri uygulamayı kullanmaktan alıkoyar. Uygulamada zaten kişisel veri tutulmaz (kelimeler herkesin kendi cihazındadır).
    Şifreyi değiştirmek için: python sifre_degistir.py YENI-SIFRE  (sonra yeniden yayınla). */
 (() => {
-  const HASH = '757d868044d7b096b1e70576e88f2dfaf6406c710f0684251908d77ec811a13c';
+  const HASH = '8fd47b61b74febb897b790c075264ab31fa309ebaed47827ab01597f9b3e2b30';
   const SALT = 'yokdil-kelime-v1';
   const APP = ['js/store.js', 'js/parser.js', 'js/tts.js', 'js/layout.js', 'js/fixer.js', 'js/ocr.js', 'js/app.js'];
   const KEY = 'yokdil.gate';

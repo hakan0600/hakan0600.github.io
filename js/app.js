@@ -1,6 +1,6 @@
 'use strict';
 
-const APP_VERSION = 9; // version.json ile aynı tutulur; farklıysa pencere kendini yeniler
+const APP_VERSION = 10; // version.json ile aynı tutulur; farklıysa pencere kendini yeniler
 
 /* ================= Yardımcılar ================= */
 const $ = (s, el = document) => el.querySelector(s);
@@ -1098,7 +1098,8 @@ async function showPhoneHelp() {
     box.hidden = false;
     box.innerHTML = `<h2>💻 Bilgisayardaki kelimelerim</h2>
       <p class="small">Önce bilgisayardaki uygulamada <b>Ayarlar → Kelimelerimi telefona gönder</b>'e bas, sonra buradan al.</p>
-      <button class="btn primary wide" data-act="pull-pc">📥 Kelimeleri bilgisayardan al</button>`;
+      <button class="btn primary wide" data-act="pull-pc">📥 Kelimeleri bilgisayardan al</button>
+      <p class="small muted" style="margin-top:10px">İnternetteki sürüme aktaracaksan: <a href="__yedek" download>yedeği dosya olarak indir</a>, sonra o sürümde Ayarlar → Yedeği yükle.</p>`;
     return;
   }
   try {
@@ -1137,7 +1138,7 @@ async function pullFromPc() {
     const added = Store.importJSON(await r.text());
     closeModal();
     route();
-    toast(`${added} yeni kelime alındı`, 4000);
+    toast(added ? `${added} yeni kelime alındı (toplam ${Store.all().length})` : `Yeni kelime yok: ${Store.all().length} kelimenin hepsi zaten bu cihazda`, 5000);
   } catch (e) { toast('Bilgisayara ulaşılamadı: aynı Wi-Fi\'de misin, uygulama bilgisayarda açık mı?', 5000); }
 }
 
