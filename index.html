@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>YÖKDİL Kelime</title>
+  <meta name="theme-color" content="#4f46e5">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="logo">Aa</span> YÖKDİL Kelime <small id="ver" class="ver"></small></div>
+    <nav id="nav" aria-label="Bölümler">
+      <a href="#/calis" data-r="calis"><span class="ic">🃏</span><span>Çalış</span></a>
+      <a href="#/quiz" data-r="quiz"><span class="ic">✍️</span><span>Quiz</span></a>
+      <a href="#/dinle" data-r="dinle"><span class="ic">🎧</span><span>Dinle</span></a>
+      <a href="#/kelimeler" data-r="kelimeler"><span class="ic">📚</span><span>Kelimeler</span></a>
+      <a href="#/ekle" data-r="ekle"><span class="ic">➕</span><span>Ekle</span></a>
+    </nav>
+    <button id="btn-settings" class="icon-btn" aria-label="Ayarlar" title="Ayarlar">⚙️</button>
+  </header>
+
+  <main id="view"></main>
+
+  <div id="dim" hidden>
+    <div class="dim-word" id="dim-word"></div>
+    <div class="dim-hint">Kapatmak için dokun</div>
+  </div>
+  <div id="toast" role="status"></div>
+  <div id="modal" class="modal" hidden></div>
+
+  <script src="js/gate.js"></script>
+</body>
+</html>

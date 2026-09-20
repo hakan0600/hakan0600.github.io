@@ -1,0 +1,60 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Parser testleri</title>
+<pre id="out">çalışmadı</pre>
+<script src="../js/parser.js"></script>
+<script>
+// [girdi satırı(ları), beklenen en, beklenen tr, tahmin mi?]
+const cases = [
+  ['abandon: terk etmek, vazgeçmek', 'abandon', 'terk etmek, vazgeçmek'],
+  ['abate (v.) azalmak, hafiflemek', 'abate', 'azalmak, hafiflemek'],
+  ['1. abide by - uymak, riayet etmek', 'abide by', 'uymak, riayet etmek'],
+  ['ambiguous (adj) belirsiz, çift anlamlı', 'ambiguous', 'belirsiz, çift anlamlı'],
+  ['terk etmek : abandon', 'abandon', 'terk etmek'],
+  ['abandon   terk etmek', 'abandon', 'terk etmek'],
+  ['• beneficial = yararlı, faydalı', 'beneficial', 'yararlı, faydalı'],
+  ['abolish — kaldırmak, ortadan kaldırmak', 'abolish', 'kaldırmak, ortadan kaldırmak'],
+  ['accurate\tdoğru, isabetli', 'accurate', 'doğru, isabetli'],
+  ['well-known: iyi bilinen, ünlü', 'well-known', 'iyi bilinen, ünlü'],
+  ['cease to exist: sona ermek', 'cease to exist', 'sona ermek'],
+  ['Achieve: başarmak', 'achieve', 'başarmak'],
+  ['12) adequate | yeterli', 'adequate', 'yeterli'],
+  ['carry out yerine getirmek', 'carry out', 'yerine getirmek', true],
+  ['abide by uymak, riayet etmek', 'abide by', 'uymak, riayet etmek', true],
+  ['abandon terk etmek', 'abandon', 'terk etmek', true],
+  ['scarce', 'scarce', '', true],
+  ['look after sb: birine bakmak', 'look after sb', 'birine bakmak'],
+  ['a) abrupt (adj.): ani, beklenmedik', 'abrupt', 'ani, beklenmedik'],
+  // OCR gürültüsü
+  ['abrupt (adi.) - ani, beklenmedik', 'abrupt', 'ani, beklenmedik'],
+  ['abate (V.) - azalmak, hafiflemek', 'abate', 'azalmak, hafiflemek'],
+  ['consequently (adv.) o: sonuç olarak', 'consequently', 'sonuç olarak'],
+  ['look after (sb): birine bakmak', 'look after (sb)', 'birine bakmak'],
+  ['accurate . ) doğru, isabetli', 'accurate', 'doğru, isabetli', true],
+];
+
+const results = [];
+let pass = 0;
+for (const [input, en, tr, guess] of cases) {
+  const { entries } = Parser.parse(input);
+  const e = entries[0] || {};
+  const ok = e.en === en && e.tr === tr && (!!e.guess === !!guess);
+  if (ok) pass++;
+  results.push((ok ? 'OK   ' : 'FAIL ') + JSON.stringify(input) + (ok ? '' : `  -> ${JSON.stringify(e)}`));
+}
+
+// Çok satırlı senaryo: başlık atlanır, sarkan anlam birleşir, tekrar eden kelime birleşir.
+const page = `UNIT 3
+12
+abandon: terk etmek,
+vazgeçmek
+abate (v.) azalmak
+abandon: bırakmak
+Page 14`;
+const { entries, skipped } = Parser.parse(page);
+const multiOk = entries.length === 2 && entries[0].en === 'abandon' && entries[0].tr === 'terk etmek, vazgeçmek, bırakmak' && entries[1].en === 'abate' && skipped === 3;
+results.push((multiOk ? 'OK   ' : 'FAIL ') + 'çok satırlı sayfa ' + JSON.stringify({ entries, skipped }));
+if (multiOk) pass++;
+
+document.getElementById('out').textContent = `${pass}/${cases.length + 1} geçti\n` + results.join('\n');
+</script>

@@ -1,0 +1,6 @@
+# Kişisel veriler: tarayıcı profili (kayıtlı kelimeler), aktarma kutusu, günlükler
+data/
+# Yerel ağ adresini içeren görüntü
+telefon_adresi_QR.png
+__pycache__/
+*.pyc
