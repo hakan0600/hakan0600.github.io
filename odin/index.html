@@ -115,6 +115,9 @@ details p { max-width: 65ch }
 .tout dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; font-size: .9rem }
 .tout dt { color: var(--muted) }
 .tout dd { margin: 0; min-width: 0 }
+.modes { display: flex; flex-direction: column; gap: 8px }
+.modes label { display: flex; gap: 10px; align-items: center; font-weight: 500; font-size: .92rem }
+.modes input { width: 20px; height: 20px; accent-color: var(--accent) }
 #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-size: .9rem; max-width: calc(100% - 32px); z-index: 5 }
 </style>
 </head>
@@ -188,7 +191,11 @@ details p { max-width: 65ch }
         </dl>
         <p class="note" id="tTip"></p>
       </div>
-      <label class="inline" for="tDogOn">Köpek sesiyle de söyle<input id="tDogOn" type="checkbox"></label>
+      <div class="modes" role="radiogroup" aria-label="Nasıl söylensin">
+        <label for="tModeMix"><input type="radio" name="tMode" id="tModeMix" value="mix"> Benim sesim + köpek sesi</label>
+        <label for="tModeDog"><input type="radio" name="tMode" id="tModeDog" value="dog"> Sadece köpek sesi (havlama dili)</label>
+      </div>
+      <label class="inline" for="tDogOn" id="tDogRow">Köpek sesiyle de söyle<input id="tDogOn" type="checkbox"></label>
       <small style="color:var(--muted)">Köpekler kelimeyi değil; tonu, kısalığı ve tekrarı anlar. Ne söylersen çevirir: tanıdığı konularda (övgü, oyun, uyku, çıkış, misafir…) doğru tona ve kısa işaret kelimesine, tanımadığı cümlede senin cümleni sıcak bir tona çevirir, Odin'in kendi perdesinde oyun havlaması, köpek gülmesi ya da iç çekme ekler. Alarm havlaması bilerek yok, çünkü Odin'i strese sokar.</small>
     </div>
   </section>
