@@ -8,20 +8,28 @@
 (() => {
   const $ = s => document.querySelector(s);
   const INTENTS = {
-    praise: { label: 'Övgü',     words: /aferin|akıll?ı|güzel|iyi (köpek|oğlan|kız)|bravo|harika|süpersin|tebrik/, say: n => `Aferiiin ${n}! Aferin!`, pitch: 1.7, rate: 0.85, clip: 'good', dog: ['laugh'], tip: 'Övgüyü davranıştan hemen sonra (2 saniye içinde) söyle.' },
+    praise: { label: 'Övgü',     words: /aferin|aferim|akıll?ı|güzel (oğlum|kızım|köpek|çocuk)|iyi (köpek|oğlan|kız|çocuk)|bravo|süpersin|tebrik/, say: n => `Aferiiin ${n}! Aferin!`, pitch: 1.7, rate: 0.85, clip: 'good', dog: ['laugh'], tip: 'Övgüyü davranıştan hemen sonra (2 saniye içinde) söyle.' },
     love:   { label: 'Sevgi',    words: /sev|canım|tatlı|bebe|özle|kuzu|yakışıklı|öp/, say: n => `${n}... canım benim. Seni seviyorum.`, pitch: 1.5, rate: 0.8, clip: 'love', dog: ['laughSoft'], tip: 'Yumuşak ve yavaş konuş; göz teması ve okşamayla birleştir.' },
     play:   { label: 'Oyun',     words: /oyna|oyun|top|koş|yakala|getir|hadi/, say: n => `${n}! Hadi hadi! Oyun!`, pitch: 1.8, rate: 1.05, clip: 'play', dog: ['laugh', 'playbark'], tip: 'Kollarını aç, öne eğil: köpeklerin oyun selamını taklit et.' },
-    calm:   { label: 'Sakin',    words: /sakin|tamam|geçti|korkma|yolunda|uyu|dinlen|şşş|sus(ma)? artık/, say: n => `Şşşş... sakin ${n}. Sakin.`, pitch: 0.9, rate: 0.7, clip: 'calm', dog: ['sigh'], tip: 'Alçak ve yavaş konuş, hareketlerini yavaşlat, yüzüne eğilme.' },
-    come:   { label: 'Gel',      words: /gel|buraya|yanıma/, say: n => `${n}, gel! Gel gel gel!`, pitch: 1.7, rate: 1.0, dog: ['yip'], tip: 'Geldiğinde mutlaka ödüllendir; "gel" sonrası asla azarlama.' },
-    no:     { label: 'Hayır',    words: /hayır|yapma|dur|bırak|olmaz|yasak|in aşağı|kes/, say: () => 'Hayır.', pitch: 0.75, rate: 0.9, dog: ['huff'], tip: 'Tek kelime, alçak ve kısa. Bağırma; sonra doğru davranışı göster ve öv.' },
-    food:   { label: 'Mama',     words: /mama|yemek|ödül|acık|kemik|su iç/, say: n => `Mama mı ${n}? Mama!`, pitch: 1.6, rate: 0.95, dog: ['playbark'], tip: 'Mamadan önce "otur" iste: sakin bekleyince ver.' },
+    calm:   { label: 'Sakin',    words: /sakin|geçti|korkma|yolunda|şşş|sus artık/, say: n => `Şşşş... sakin ${n}. Sakin.`, pitch: 0.9, rate: 0.7, clip: 'calm', dog: ['sigh'], tip: 'Alçak ve yavaş konuş, hareketlerini yavaşlat, yüzüne eğilme.' },
+    come:   { label: 'Gel',      words: /\bgel\b|\bgel gel|buraya|yanıma/, say: n => `${n}, gel! Gel gel gel!`, pitch: 1.7, rate: 1.0, dog: ['yip'], tip: 'Geldiğinde mutlaka ödüllendir; "gel" sonrası asla azarlama.' },
+    no:     { label: 'Hayır',    words: /hayır|yapma|\bdur\b|bırak|olmaz|yasak|in aşağı|kes şunu/, say: () => 'Hayır.', pitch: 0.75, rate: 0.9, dog: ['huff'], tip: 'Tek kelime, alçak ve kısa. Bağırma; sonra doğru davranışı göster ve öv.' },
+    food:   { label: 'Mama',     words: /mama|yemek|ödül|acık|kemik/, say: n => `Mama mı ${n}? Mama!`, pitch: 1.6, rate: 0.95, dog: ['playbark'], tip: 'Mamadan önce "otur" iste: sakin bekleyince ver.' },
     walk:   { label: 'Gezme',    words: /gez|dışarı|yürü|tasma|park|sokak|tuvalet|çiş/, say: n => `Gezmeye mi gidiyoruz ${n}? Hadi gezmeye!`, pitch: 1.7, rate: 1.0, dog: ['laugh'], tip: 'Tasmayı göstererek aynı kelimeyi kullan; Odin kelimeyi tasmayla eşleştirir.' },
+    sleep:  { label: 'Uyku',     words: /uyu|iyi geceler|yat(ağa|alım)|dinlen|uykun/, say: n => `İyi geceler ${n}... uyu bakalım.`, pitch: 1.0, rate: 0.65, clip: 'calm', dog: ['sigh'], tip: 'Yatmadan önce hep aynı sözü ve aynı sakin tonu kullan; rutin Odin\'i rahatlatır.' },
+    leave:  { label: 'Çıkış',    words: /gidiyorum|çıkıyorum|birazdan|geleceğim|dönerim|işe gid|evde kal/, say: n => `${n}, birazdan geleceğim. Evde kal.`, pitch: 1.0, rate: 0.85, dog: [], tip: 'Çıkışı abartma, kısa ve sakin söyle; dönünce de sakinleşince sev. Ayrılık kaygısını azaltır.' },
+    greet:  { label: 'Dönüş',    words: /geldim|günaydın|merhaba|selam|döndüm|özledin mi/, say: n => `Merhaba ${n}! Geldim!`, pitch: 1.6, rate: 0.95, clip: 'love', dog: ['laughSoft'], tip: 'Önce sakinleşmesini bekle, sonra sev; zıplarken ilgi gösterme.' },
+    water:  { label: 'Su',       words: /\bsu\b|susa|içmek/, say: n => `Su mu ${n}? Su!`, pitch: 1.5, rate: 0.9, dog: [], tip: 'Pomeranian\'lar sıcağa hassastır; su kabını hep dolu tut.' },
+    vet:    { label: 'Güven',    words: /banyo|veteriner|aşı|tırnak|tarak|ilaç|korkuyor|korktun/, say: n => `Aferin ${n}, çok cesursun. Buradayım.`, pitch: 1.2, rate: 0.75, clip: 'calm', dog: [], tip: 'Sakin ve alçak konuş, her küçük adımda ödül ver; zorla tutma.' },
+    car:    { label: 'Araba',    words: /araba|araç|yolculu|binelim/, say: n => `Arabaya biniyoruz ${n}! Hadi!`, pitch: 1.6, rate: 1.0, dog: ['laughSoft'], tip: 'İlk yolculukları kısa tut, sonunda güzel bir yere (park) git.' },
+    guest:  { label: 'Misafir',  words: /misafir|gelen var|kapı|zil|tanıdık|arkadaş/, say: n => `Tamam ${n}, gördüm. Teşekkürler. Sakin.`, pitch: 0.95, rate: 0.8, dog: ['sigh'], tip: 'Haber verdiği için bir kez teşekkür et, sonra sakin ol; bağırırsan birlikte havladığınızı sanar.' },
     sit:    { label: 'Otur',     words: /otur|bekle|yat|kal/, say: n => `${n}, otur. Aferin.`, pitch: 1.1, rate: 0.85, dog: [], tip: 'Komutu bir kez söyle, el işaretiyle birleştir, yaptığında öv.' },
   };
   const intentOf = text => {
     const t = text.toLocaleLowerCase('tr-TR');
-    for (const [k, v] of Object.entries(INTENTS)) if (v.words.test(t)) return k;
-    return 'love';
+    const order = ['sleep', 'leave', 'greet', 'vet', 'guest', 'car', 'water', 'walk', 'food', 'no', 'calm', 'come', 'sit', 'play', 'praise', 'love'];
+    for (const k of order) if (INTENTS[k].words.test(t)) return k;
+    return 'free';
   };
   const name = () => ($('#name').value.trim() || 'Odin');
   const odinPitch = () => {
@@ -81,8 +89,11 @@
     });
   }
 
+  // tanınmayan cümle: kendi cümlen, köpeğe yönelik sıcak tonda, adıyla başlar
+  const FREE = text => ({ label: 'Serbest (senin cümlen)', say: n => `${n}... ${text}`, pitch: 1.5, rate: 0.8, dog: ['laughSoft'],
+    tip: 'Odin cümleyi değil tonu ve kelimeleri tanır. Aynı şeyi hep aynı kısa kelimeyle söylersen zamanla öğrenir.' });
   async function translate(text) {
-    const k = intentOf(text), it = INTENTS[k];
+    const k = intentOf(text), it = k === 'free' ? FREE(text) : INTENTS[k];
     $('#tOut').hidden = false;
     $('#tHeard').textContent = `“${text}”`;
     $('#tIntent').textContent = it.label;
