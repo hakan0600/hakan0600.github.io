@@ -1,0 +1,21 @@
+# Claude'un (GitHub App) gönderimleri GitHub Pages yayınını başlatmıyor.
+# Bu iş, bot gönderiminden sonra GITHUB_TOKEN ile boş bir commit atar; bu commit Pages yayınını başlatır.
+# GITHUB_TOKEN gönderimleri iş akışı tetiklemez, döngü olmaz. Senin kendi gönderimlerinde çalışmaz.
+name: Pages yayınını tetikle
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  tetikle:
+    if: github.event_name == 'workflow_dispatch' || github.actor != 'hakan0600'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "Pages yayınını tetikle"
+          git push
