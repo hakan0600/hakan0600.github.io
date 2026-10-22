@@ -105,6 +105,16 @@ details p { max-width: 65ch }
 .soundbtns button { padding: 14px }
 .soundbtns button.on { background: var(--calm); color: var(--accent-ink); border-color: var(--calm) }
 .note { color: var(--muted); font-size: .85rem; margin: 10px 0 0; max-width: 65ch }
+.big2 { width: 100%; padding: 16px; font: 700 1.05rem var(--display); background: var(--need); color: var(--accent-ink); border: 0 }
+.big2.rec { background: var(--warn) }
+#tForm input { flex: 1 1 180px; min-width: 0 }
+.chips { display: flex; flex-wrap: wrap; gap: 8px }
+.chips button { padding: 8px 12px; border-radius: 99px; font-weight: 500; font-size: .9rem }
+.tout { border-top: 1px solid var(--line); padding-top: 12px }
+#tHeard { margin: 0 0 8px; font: 600 1.05rem var(--display) }
+.tout dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; font-size: .9rem }
+.tout dt { color: var(--muted) }
+.tout dd { margin: 0; min-width: 0 }
 #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-size: .9rem; max-width: calc(100% - 32px); z-index: 5 }
 </style>
 </head>
@@ -149,6 +159,38 @@ details p { max-width: 65ch }
   <section>
     <h2>Bugün neler dedi</h2>
     <ul id="hist"></ul>
+  </section>
+
+  <section>
+    <h2>Odin'e söyle</h2>
+    <div class="set">
+      <button id="tMic" type="button" class="big2">Konuş, çevireyim</button>
+      <form id="tForm" class="row">
+        <input id="tText" type="text" autocomplete="off" placeholder="ya da yaz: aferin oğlum, hadi oynayalım…" aria-label="Odin'e söylemek istediğin">
+        <button type="submit">Çevir</button>
+      </form>
+      <div class="chips">
+        <button type="button" data-say="Aferin oğlum">Aferin</button>
+        <button type="button" data-say="Seni seviyorum">Seni seviyorum</button>
+        <button type="button" data-say="Hadi oynayalım">Oynayalım</button>
+        <button type="button" data-say="Sakin ol">Sakin ol</button>
+        <button type="button" data-say="Gel buraya">Gel</button>
+        <button type="button" data-say="Hayır, yapma">Hayır</button>
+        <button type="button" data-say="Mama ister misin">Mama</button>
+        <button type="button" data-say="Gezmeye gidelim mi">Gezme</button>
+      </div>
+      <div id="tOut" class="tout" hidden>
+        <p id="tHeard"></p>
+        <dl>
+          <dt>Anlamı</dt><dd id="tIntent"></dd>
+          <dt>Odin'e söylenen</dt><dd id="tSay"></dd>
+          <dt>Köpek sesi</dt><dd id="tDog"></dd>
+        </dl>
+        <p class="note" id="tTip"></p>
+      </div>
+      <label class="inline" for="tDogOn">Köpek sesiyle de söyle<input id="tDogOn" type="checkbox"></label>
+      <small style="color:var(--muted)">Köpekler kelimeyi değil; tonu, kısalığı ve tekrarı anlar. Söylediğini doğru tona çevirir, Odin'in kendi perdesinde oyun havlaması, köpek gülmesi ya da iç çekme ekler. Alarm havlaması bilerek yok, çünkü Odin'i strese sokar.</small>
+    </div>
   </section>
 
   <section>
@@ -198,5 +240,6 @@ details p { max-width: 65ch }
 <script src="tf.min.js"></script>
 <script src="app.js"></script>
 <script src="sounds.js"></script>
+<script src="talk.js"></script>
 </body>
 </html>

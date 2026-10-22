@@ -185,5 +185,5 @@
   $('#praise').checked = opt.praise; $('#praise').onchange = e => { opt.praise = e.target.checked; save('praise', opt.praise); };
   render();
 
-  window.OdinSounds = { respond, phrase, startMusic, stopMusic };
+  window.OdinSounds = { respond, phrase, startMusic, stopMusic, has: k => !!clips[k] };
 })();

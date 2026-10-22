@@ -1,6 +1,6 @@
 /* Çevrimdışı çalışma: kabuk önce ağ, model ve tf.js önce önbellek (16 MB bir kez iner). */
-const SHELL = 'odin-shell-v1', BIG = 'odin-model-v1';
-const SHELL_FILES = ['./', 'index.html', 'app.js', 'sounds.js', 'capture.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
+const SHELL = 'odin-shell-v2', BIG = 'odin-model-v1';
+const SHELL_FILES = ['./', 'index.html', 'app.js', 'sounds.js', 'talk.js', 'capture.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 const BIG_FILES = ['tf.min.js', 'model/model.json', 'model/group1-shard1of4.bin', 'model/group1-shard2of4.bin', 'model/group1-shard3of4.bin', 'model/group1-shard4of4.bin'];
 self.addEventListener('install', e => {
   e.waitUntil((async () => {
