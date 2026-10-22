@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Odin Tercüman</title>
+<meta name="theme-color" content="#E8731C">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+/* Tek sütun telefon düzeni: üstte büyük "şu an ne diyor" kartı, altında canlı ses şeridi, geçmiş ve ayarlar */
+:root {
+  --bg: #F2F4F6; --surface: #FFFFFF; --ink: #1C222B; --muted: #5E6773; --line: #DDE2E8;
+  --accent: #E0691A; --accent-ink: #FFFFFF; --meter: #C9D1DA;
+  --warn: #C2410C; --calm: #2F7D5B; --need: #6D5BD0;
+  --display: "Avenir Next", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Roboto Mono", monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161B; --surface: #1B2128; --ink: #E9EDF1; --muted: #9AA4AF; --line: #2A323B;
+  --accent: #F2843A; --accent-ink: #1A0E05; --meter: #34404C;
+  --warn: #FB8B5B; --calm: #5DC79A; --need: #A99BFF; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12161B; --surface: #1B2128; --ink: #E9EDF1; --muted: #9AA4AF; --line: #2A323B;
+  --accent: #F2843A; --accent-ink: #1A0E05; --meter: #34404C;
+  --warn: #FB8B5B; --calm: #5DC79A; --need: #A99BFF; color-scheme: dark }
+* { box-sizing: border-box }
+html, body { margin: 0 }
+body { background: var(--bg); color: var(--ink); font: 16px/1.5 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: calc(env(safe-area-inset-top, 0px) + 16px) calc(env(safe-area-inset-bottom, 0px) + 32px) }
+main { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px }
+[hidden] { display: none !important }
+header { display: flex; align-items: center; gap: 12px }
+header img { width: 44px; height: 44px; border-radius: 12px }
+h1 { font: 700 1.35rem/1.1 var(--display); margin: 0; text-wrap: balance }
+h1 small { display: block; font: 500 .8rem var(--body); color: var(--muted); margin-top: 2px }
+#status { margin-left: auto; font: 600 .72rem var(--body); letter-spacing: .06em; text-transform: uppercase; padding: 5px 10px; border-radius: 99px; background: var(--line); color: var(--muted); white-space: nowrap }
+#status[data-k="ok"] { background: color-mix(in srgb, var(--calm) 18%, transparent); color: var(--calm) }
+#status[data-k="ok"]::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: currentColor; margin-right: 6px; animation: pulse 1.4s infinite }
+#status[data-k="err"] { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn) }
+@keyframes pulse { 50% { opacity: .25 } }
+@media (prefers-reduced-motion: reduce) { #status::before { animation: none !important } }
+
+#nowCard { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 14px; border-top: 6px solid var(--accent) }
+#nowCard[data-m="alarm"], #nowCard[data-m="threat"], #nowCard[data-m="pain"] { border-top-color: var(--warn) }
+#nowCard[data-m="play"], #nowCard[data-m="attn"], #nowCard[data-m="food"] { border-top-color: var(--calm) }
+#nowCard[data-m="need"], #nowCard[data-m="bored"], #nowCard[data-m="lonely"] { border-top-color: var(--need) }
+.eyebrow { font: 600 .72rem var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 }
+#nowText { font: 700 1.6rem/1.2 var(--display); margin: 0; text-wrap: balance }
+#nowMeta { color: var(--muted); font: .82rem var(--mono); margin: 0; font-variant-numeric: tabular-nums }
+#idle p { margin: 0; color: var(--muted) }
+#idle strong { color: var(--ink) }
+.trow { display: grid; grid-template-columns: 96px 1fr 40px; gap: 10px; align-items: center; font-size: .85rem }
+.trow i { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden }
+.trow b { display: block; height: 100%; background: var(--accent); border-radius: 4px }
+.trow em { font: normal .78rem var(--mono); color: var(--muted); text-align: right; font-variant-numeric: tabular-nums }
+#types { display: flex; flex-direction: column; gap: 6px }
+.row { display: flex; gap: 8px; flex-wrap: wrap }
+button, select, input[type=text] { font: inherit; color: inherit }
+button { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px 14px; cursor: pointer; font-weight: 600 }
+button:disabled { opacity: .45 }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px }
+#go { width: 100%; padding: 18px; font: 700 1.1rem var(--display); background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 16px }
+#go.on { background: var(--ink); color: var(--bg) }
+select { flex: 1 1 200px; min-width: 0; padding: 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg) }
+#ignored { margin: 0; color: var(--muted); font-size: .85rem; text-align: center }
+
+.strip { display: flex; flex-direction: column; gap: 6px }
+#meter { width: 100%; height: 56px; display: block; border-radius: 10px; background: var(--surface); border: 1px solid var(--line) }
+.strip small { color: var(--muted); font-size: .78rem }
+
+section h2 { font: 700 1rem var(--display); margin: 0 0 10px }
+#hist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border-top: 1px solid var(--line) }
+#hist li { display: grid; grid-template-columns: 46px 10px 1fr; gap: 10px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: .92rem }
+#hist li.empty { display: block; color: var(--muted) }
+#hist time { font: .8rem var(--mono); color: var(--muted); font-variant-numeric: tabular-nums }
+#hist p { margin: 0; min-width: 0 }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); align-self: center }
+.dot[data-m="alarm"], .dot[data-m="threat"], .dot[data-m="pain"] { background: var(--warn) }
+.dot[data-m="play"], .dot[data-m="attn"], .dot[data-m="food"] { background: var(--calm) }
+.dot[data-m="need"], .dot[data-m="bored"], .dot[data-m="lonely"] { background: var(--need) }
+
+.set { display: flex; flex-direction: column; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px }
+.set label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: .92rem }
+.set label span { font-weight: 400; color: var(--muted); font-size: .82rem }
+.set .inline { flex-direction: row; align-items: center; justify-content: space-between }
+input[type=text] { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg) }
+input[type=range] { width: 100%; accent-color: var(--accent) }
+input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--accent) }
+details { color: var(--muted); font-size: .9rem }
+details summary { cursor: pointer; color: var(--ink); font-weight: 600 }
+details p { max-width: 65ch }
+.phrases { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px }
+.phrase { display: flex; flex-direction: column; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px; min-width: 0 }
+.phrase small { color: var(--muted); font-size: .8rem }
+.phrase .row { margin-top: 6px }
+.phrase .row button { flex: 1 1 auto }
+.recb { touch-action: none; user-select: none; -webkit-user-select: none }
+.recb.rec { background: var(--warn); color: var(--accent-ink); border-color: var(--warn) }
+.soundbtns { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px }
+.soundbtns button { padding: 14px }
+.soundbtns button.on { background: var(--calm); color: var(--accent-ink); border-color: var(--calm) }
+.note { color: var(--muted); font-size: .85rem; margin: 10px 0 0; max-width: 65ch }
+#toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-size: .9rem; max-width: calc(100% - 32px); z-index: 5 }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="icon-192.png" alt="">
+    <h1>Odin Tercüman<small>Pomeranian ses çevirmeni · 3 yaşında</small></h1>
+    <span id="status" data-k="off">Kapalı</span>
+  </header>
+
+  <button id="go" type="button">Dinlemeye başla</button>
+
+  <div id="nowCard">
+    <p class="eyebrow">Odin şu an ne diyor</p>
+    <div id="idle">
+      <p><strong>Dinlemeye başla</strong>'ya dokun ve telefonu Odin'in yakınına koy. Havladığında ne demek istediğini sesli söyleyeceğim.</p>
+    </div>
+    <div id="now" hidden>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <p id="nowText"></p>
+        <p id="nowMeta"></p>
+        <div id="types"></div>
+        <div class="row">
+          <button id="ok" type="button">Doğru</button>
+          <button id="wrong" type="button">Yanlış, düzelt</button>
+        </div>
+        <div class="row" id="fixRow" hidden>
+          <select id="fix" aria-label="Doğru anlam"></select>
+          <button id="fixSave" type="button">Kaydet</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p id="ignored" hidden></p>
+
+  <div class="strip">
+    <canvas id="meter" aria-label="Canlı ses seviyesi"></canvas>
+    <small>Kesik çizginin üstüne çıkan sesler havlama sayılır. Çok hassas ya da az hassassa aşağıdan ayarla.</small>
+  </div>
+
+  <section>
+    <h2>Bugün neler dedi</h2>
+    <ul id="hist"></ul>
+  </section>
+
+  <section>
+    <h2>Odin'i mutlu et</h2>
+    <div class="soundbtns">
+      <button id="music" type="button">Sakinleştirici müzik</button>
+      <button id="noise" type="button">Kahverengi gürültü</button>
+      <button id="squeak" type="button">Oyuncak sesi</button>
+    </div>
+    <p class="note">Müzik yavaş ve sade bir piyano: dakikada 55 vuruş, 30 dakika sonra kendiliğinden susar. Gürültü dışarıdaki kapı, korna ve havai fişek seslerini bastırır.</p>
+    <h2 style="margin-top:18px">Senin sesin</h2>
+    <div class="phrases" id="phrases"></div>
+    <p class="note">Her sözü kendi sesinle, Odin'e konuşur gibi kaydet: biraz tiz, yavaş ve sevecen. Köpekler sahibinin sesine en çok bu tonda tepki verir. Kayıt yoksa yapay ses aynı tonda konuşur.</p>
+    <div class="set" style="margin-top:12px">
+      <label class="inline" for="auto">Otomatik cevap ver<input id="auto" type="checkbox"></label>
+      <small style="color:var(--muted)">Yalnız kaldığında ya da huzursuzlandığında müzik ve "Seni seviyorum" çalar. Alarm verdiğinde "Sakin ol" der. İlgi ya da oyun için havladığında cevap vermez, yoksa Odin havlayarak ilgi çekmeyi öğrenir.</small>
+      <label class="inline" for="praise">Susunca "Aferin" de<input id="praise" type="checkbox"></label>
+      <small style="color:var(--muted)">Otomatik cevaptan sonra 1 dakika sessiz kalırsa onu sakin kaldığı için ödüllendirir.</small>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ayarlar</h2>
+    <div class="set">
+      <label for="name">Köpeğin adı<input id="name" type="text" autocomplete="off"></label>
+      <label for="sens">Hassasiyet: <output id="sensVal"></output><span>Düşük değer daha hassas. Gürültülü evde 15–20 dB dene.</span>
+        <input id="sens" type="range" min="6" max="24" step="1"></label>
+      <label class="inline" for="voice">Sesli uyarı<input id="voice" type="checkbox"></label>
+      <label class="inline" for="quiet">Sakin sesleri de söyle<input id="quiet" type="checkbox"></label>
+      <small style="color:var(--muted)">Horlama, koklama ve çiğneme normalde yalnız ekranda görünür, Odin uyanmasın diye.</small>
+      <div class="row">
+        <button id="test" type="button">Sesi dene</button>
+        <button id="reset" type="button">Öğrenileni sıfırla</button>
+      </div>
+      <small style="color:var(--muted)">Öğretilen örnek: <b id="learnCount">0</b>. Her "Doğru" ya da düzeltme Odin'e özel hafızaya eklenir.</small>
+    </div>
+  </section>
+
+  <details>
+    <summary>Nasıl çalışıyor?</summary>
+    <p>Ses geldiğinde Google'ın YAMNet modeli sesin türünü ayırır: havlama, tiz havlama, hırlama, inleme, uluma, "he he he" soluması, iç çekme, hapşırma, burun çekme, öksürük, horlama, koklama, homurtu ve çiğneme. Kapı zili ya da kapı vurulmasını da duyar, böylece "kapıda biri var" havlamasını ayırır. Model milyonlarca ses kaydıyla (AudioSet) eğitildi ve telefonun içinde çalışır, ses hiçbir yere gönderilmez.</p>
+    <p>Anlamı havlama sayısı, hızı, süresi ve perdesine göre çıkarırım. Bu kurallar köpek sesleri üzerine yapılan araştırmalara dayanır: hızlı ve sert seriler alarm, tiz ve aralıklı havlamalar oyun ya da istek, düşük ve uzun sesler tehdit anlamına gelir. Perdeyi Odin'in kendi ortalamasıyla karşılaştırırım, çünkü Pomeranian'lar zaten tiz havlar.</p>
+    <p>Bunlar tahmindir. Doğru ya da Yanlış'a dokundukça uygulama Odin'i tanır ve kendi örneklerine göre karar vermeye başlar. Ekran açık kalmalı; telefon kilitlenince tarayıcı mikrofonu kapatır.</p>
+  </details>
+</main>
+<div id="toast" hidden></div>
+<script src="tf.min.js"></script>
+<script src="app.js"></script>
+<script src="sounds.js"></script>
+</body>
+</html>
