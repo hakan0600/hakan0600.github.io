@@ -218,5 +218,10 @@
   }
   const ownCount = () => Object.values(ownIndex()).reduce((a, l) => a + l.length, 0);
 
-  window.OdinSounds = { respond, phrase, startMusic, stopMusic, has: k => !!clips[k], saveOwn, getOwn, ownCount };
+  // konu başına sahibin kaydettiği gerçek ses (tasma, mama kabı, oyuncak, ıslık)
+  const putCue = (k, blob) => tx('readwrite', st => st.put(blob, 'cue:' + k));
+  const getCue = k => tx('readonly', st => st.get('cue:' + k)).catch(() => null);
+  const delCue = k => tx('readwrite', st => st.delete('cue:' + k));
+
+  window.OdinSounds = { respond, phrase, startMusic, stopMusic, has: k => !!clips[k], saveOwn, getOwn, ownCount, putCue, getCue, delCue };
 })();

@@ -1,29 +1,29 @@
 /* İnsan dilinden Odin diline.
-   Köpekler kelimenin anlamını değil tonu, kısalığı, tekrarı ve tanıdık sesleri anlar. Söyleneni niyete çevirir
-   (övgü, sevgi, oyun, sakin, gel, hayır, mama, gezme, otur), sonra:
-   1) köpeğe yönelik tonda kısa bir işaret cümlesi (varsa sahibin kaydı),
-   2) isteğe bağlı gerçek köpek sesi: önce Odin'in kendi kaydı, yoksa Barkopedia veri setinden gerçek kayıt.
-   Alarm/tehdit havlaması bilerek yok: köpeği strese sokar. */
+   Köpekler cümle anlamaz; sesleri olaylarla eşleştirir (tasma şıngırtısı = gezme, mama kabı = mama).
+   Her konunun kendine ait bir ses imzası var. Çalma önceliği:
+   1) senin o konu için kaydettiğin gerçek ses (tasma, mama kabı, oyuncak, ıslık),
+   2) Odin'in dinlerken yakalanan kendi sesi,
+   3) Barkopedia veri setinden seçilmiş gerçek köpek kayıtları. */
 'use strict';
 (() => {
   const $ = s => document.querySelector(s);
   const INTENTS = {
-    praise: { label: 'Övgü',     words: /aferin|aferim|akıll?ı|güzel (oğlum|kızım|köpek|çocuk)|iyi (köpek|oğlan|kız|çocuk)|bravo|süpersin|tebrik/, say: n => `Aferiiin ${n}! Aferin!`, pitch: 1.7, rate: 0.85, clip: 'good', dog: ['laugh'], tip: 'Övgüyü davranıştan hemen sonra (2 saniye içinde) söyle.' },
-    love:   { label: 'Sevgi',    words: /sev|canım|tatlı|bebe|özle|kuzu|yakışıklı|öp/, say: n => `${n}... canım benim. Seni seviyorum.`, pitch: 1.5, rate: 0.8, clip: 'love', dog: ['laugh'], tip: 'Yumuşak ve yavaş konuş; göz teması ve okşamayla birleştir.' },
-    play:   { label: 'Oyun',     words: /oyna|oyun|top|koş|yakala|getir|hadi/, say: n => `${n}! Hadi hadi! Oyun!`, pitch: 1.8, rate: 1.05, clip: 'play', dog: ['laugh', 'playbark'], tip: 'Kollarını aç, öne eğil: köpeklerin oyun selamını taklit et.' },
-    calm:   { label: 'Sakin',    words: /sakin|geçti|korkma|yolunda|şşş|sus artık/, say: n => `Şşşş... sakin ${n}. Sakin.`, pitch: 0.9, rate: 0.7, clip: 'calm', dog: ['sigh'], tip: 'Alçak ve yavaş konuş, hareketlerini yavaşlat, yüzüne eğilme.' },
-    come:   { label: 'Gel',      words: /\bgel\b|\bgel gel|buraya|yanıma/, say: n => `${n}, gel! Gel gel gel!`, pitch: 1.7, rate: 1.0, dog: ['yip'], tip: 'Geldiğinde mutlaka ödüllendir; "gel" sonrası asla azarlama.' },
-    no:     { label: 'Hayır',    words: /hayır|yapma|\bdur\b|bırak|olmaz|yasak|in aşağı|kes şunu/, say: () => 'Hayır.', pitch: 0.75, rate: 0.9, dog: ['sharp'], tip: 'Tek kelime, alçak ve kısa. Bağırma; sonra doğru davranışı göster ve öv.' },
-    food:   { label: 'Mama',     words: /mama|yemek|ödül|acık|kemik/, say: n => `Mama mı ${n}? Mama!`, pitch: 1.6, rate: 0.95, dog: ['playbark'], tip: 'Mamadan önce "otur" iste: sakin bekleyince ver.' },
-    walk:   { label: 'Gezme',    words: /gez|dışarı|yürü|tasma|park|sokak|tuvalet|çiş/, say: n => `Gezmeye mi gidiyoruz ${n}? Hadi gezmeye!`, pitch: 1.7, rate: 1.0, dog: ['laugh', 'playbark'], tip: 'Tasmayı göstererek aynı kelimeyi kullan; Odin kelimeyi tasmayla eşleştirir.' },
-    sleep:  { label: 'Uyku',     words: /uyu|iyi geceler|yat(ağa|alım)|dinlen|uykun/, say: n => `İyi geceler ${n}... uyu bakalım.`, pitch: 1.0, rate: 0.65, clip: 'calm', dog: ['sigh'], tip: 'Yatmadan önce hep aynı sözü ve aynı sakin tonu kullan; rutin Odin\'i rahatlatır.' },
-    leave:  { label: 'Çıkış',    words: /gidiyorum|çıkıyorum|birazdan|geleceğim|dönerim|işe gid|evde kal/, say: n => `${n}, birazdan geleceğim. Evde kal.`, pitch: 1.0, rate: 0.85, dog: ['sigh'], tip: 'Çıkışı abartma, kısa ve sakin söyle; dönünce de sakinleşince sev. Ayrılık kaygısını azaltır.' },
-    greet:  { label: 'Dönüş',    words: /geldim|günaydın|merhaba|selam|döndüm|özledin mi/, say: n => `Merhaba ${n}! Geldim!`, pitch: 1.6, rate: 0.95, clip: 'love', dog: ['laugh', 'playbark'], tip: 'Önce sakinleşmesini bekle, sonra sev; zıplarken ilgi gösterme.' },
-    water:  { label: 'Su',       words: /\bsu\b|susa|içmek/, say: n => `Su mu ${n}? Su!`, pitch: 1.5, rate: 0.9, dog: ['playbark'], tip: 'Pomeranian\'lar sıcağa hassastır; su kabını hep dolu tut.' },
-    vet:    { label: 'Güven',    words: /banyo|veteriner|aşı|tırnak|tarak|ilaç|korkuyor|korktun/, say: n => `Aferin ${n}, çok cesursun. Buradayım.`, pitch: 1.2, rate: 0.75, clip: 'calm', dog: ['sigh'], tip: 'Sakin ve alçak konuş, her küçük adımda ödül ver; zorla tutma.' },
-    car:    { label: 'Araba',    words: /araba|araç|yolculu|binelim/, say: n => `Arabaya biniyoruz ${n}! Hadi!`, pitch: 1.6, rate: 1.0, dog: ['laugh'], tip: 'İlk yolculukları kısa tut, sonunda güzel bir yere (park) git.' },
-    guest:  { label: 'Misafir',  words: /misafir|gelen var|kapı|zil|tanıdık|arkadaş/, say: n => `Tamam ${n}, gördüm. Teşekkürler. Sakin.`, pitch: 0.95, rate: 0.8, dog: ['sigh'], tip: 'Haber verdiği için bir kez teşekkür et, sonra sakin ol; bağırırsan birlikte havladığınızı sanar.' },
-    sit:    { label: 'Otur',     words: /otur|bekle|yat|kal/, say: n => `${n}, otur. Aferin.`, pitch: 1.1, rate: 0.85, dog: ['sigh'], tip: 'Komutu bir kez söyle, el işaretiyle birleştir, yaptığında öv.' },
+    praise: { label: 'Övgü',    words: /aferin|aferim|akıll?ı|güzel (oğlum|kızım|köpek|çocuk)|iyi (köpek|oğlan|kız|çocuk)|bravo|süpersin|tebrik/, dog: ['play'], cue: 'klik sesi ya da hep aynı "aferin" sözün', tip: 'Ödülü davranıştan sonraki 2 saniye içinde ver.' },
+    love:   { label: 'Sevgi',   words: /sev|canım|tatlı|bebe|özle|kuzu|yakışıklı|öp/, dog: ['whine'], cue: 'öpücük sesi', tip: 'Okşamayla birleştir; ses ile dokunuş eşleşir.' },
+    play:   { label: 'Oyun',    words: /oyna|oyun|top|koş|yakala|getir|hadi/, dog: ['pant', 'play'], cue: 'en sevdiği oyuncağın gıcırtısı', tip: 'Kayıttan sonra gerçekten oyna; ses oyunla eşleşir.' },
+    calm:   { label: 'Sakin',   words: /sakin|geçti|korkma|yolunda|şşş|sus artık/, dog: ['sigh'], cue: 'yavaş bir "şşşş"', tip: 'Sesten sonra hareketlerini yavaşlat.' },
+    come:   { label: 'Gel',     words: /\bgel\b|\bgel gel|buraya|yanıma/, dog: ['attn'], cue: 'ıslığın ya da dil şaklatman', tip: 'Geldiğinde hep ödül ver; bu ses ona "gelince güzel şey olur" demek olur.' },
+    no:     { label: 'Hayır',   words: /hayır|yapma|\bdur\b|bırak|olmaz|yasak|in aşağı|kes şunu/, dog: ['sharp'], cue: 'parmak şıklatma ya da kısa "eh!"', tip: 'Kısa tut, sonra doğru davranışı göster.' },
+    food:   { label: 'Mama',    words: /mama|yemek|ödül|acık|kemik/, dog: ['food'], cue: 'mama kabının ya da mama paketinin sesi', tip: 'Mamayı bu sesten hemen sonra ver; birkaç günde sesi tanır.' },
+    walk:   { label: 'Gezme',   words: /gez|dışarı|yürü|tasma|park|sokak|tuvalet|çiş/, dog: ['excited'], cue: 'tasmanın ya da anahtarların şıngırtısı', tip: 'Sesten sonra gerçekten gezmeye çık.' },
+    sleep:  { label: 'Uyku',    words: /uyu|iyi geceler|yat(ağa|alım)|dinlen|uykun/, dog: ['snore'], cue: 'yatağına vururken çıkan ses ya da sakin "şşş"', tip: 'Her gece aynı saatte, aynı ses.' },
+    leave:  { label: 'Çıkış',   words: /gidiyorum|çıkıyorum|birazdan|geleceğim|dönerim|işe gid|evde kal/, dog: ['grunt'], cue: 'çıkarken hep söylediğin kısa söz', tip: 'Çıkışı abartma; sakin ayrılık kaygıyı azaltır.' },
+    greet:  { label: 'Dönüş',   words: /geldim|günaydın|merhaba|selam|döndüm|özledin mi/, dog: ['woof', 'pant'], cue: 'kapının ya da anahtarının sesi', tip: 'Sakinleşince sev.' },
+    water:  { label: 'Su',      words: /\bsu\b|susa|içmek/, dog: ['woof', 'food'], cue: 'su kabına su doldururken çıkan ses', tip: 'Pomeranian\'lar sıcağa hassastır; su hep dolu olsun.' },
+    vet:    { label: 'Güven',   words: /banyo|veteriner|aşı|tırnak|tarak|ilaç|korkuyor|korktun/, dog: ['whine', 'sigh'], cue: 'sakinleştiren sözün', tip: 'Her küçük adımda ödül ver.' },
+    car:    { label: 'Araba',   words: /araba|araç|yolculu|binelim/, dog: ['excited', 'pant'], cue: 'araba anahtarı ya da kapı sesi', tip: 'İlk yolculuklar kısa ve güzel bir yerde bitsin.' },
+    guest:  { label: 'Misafir', words: /misafir|gelen var|kapı|zil|tanıdık|arkadaş/, dog: ['sharp', 'sigh'], cue: '"tamam, gördüm" sözün', tip: 'Haber verdiği için bir kez teşekkür et, sonra sakin ol.' },
+    sit:    { label: 'Otur',    words: /otur|bekle|yat|kal/, dog: ['woof'], cue: '"otur" sözün', tip: 'El işaretiyle birleştir, yaptığında öv.' },
   };
   const intentOf = text => {
     const t = text.toLocaleLowerCase('tr-TR');
@@ -33,22 +33,15 @@
   };
 
   // ---------- köpek sesleri (gerçek kayıtlar) ----------
-  // Önce Odin'in kendi kaydı (dinlerken yakalananlar), yoksa Barkopedia veri setinden seçilmiş gerçek köpek kayıtları.
-  const SRC = {
-    playbark: { own: ['play', 'attn', 'food'], stock: 'play' },
-    yip:      { own: ['attn', 'play'], stock: 'attn' },
-    sharp:    { own: ['alarm', 'attn'], stock: 'attn' },
-    laugh:    { own: ['laugh'], stock: 'laugh' },
-    laughSoft:{ own: ['laugh', 'sigh', 'grunt'], stock: 'laugh' },
-    sigh:     { own: ['sigh', 'grunt'], stock: 'sigh' },
-  };
+  // ses türü -> Odin'in kendi kayıtlarından hangi anlamlar uygun
+  const OWN = { play: ['play'], whine: ['need'], pant: ['laugh'], sigh: ['sigh'], attn: ['attn'], sharp: ['alarm'], food: ['food'],
+    excited: ['play'], snore: ['snore'], grunt: ['grunt'], woof: ['attn', 'alarm'] };
   let stock = null;
   const stockList = () => stock ||= fetch('sesler/index.json').then(r => r.json()).catch(() => ({}));
   async function clipFor(k) {
-    const src = SRC[k]; if (!src) return null;
-    const own = await window.OdinSounds?.getOwn(src.own);
+    const own = await window.OdinSounds?.getOwn(OWN[k] || []);
     if (own) return { url: URL.createObjectURL(own), own: true };
-    const list = (await stockList())[src.stock] || [];
+    const list = (await stockList())[k] || [];
     return list.length ? { url: 'sesler/' + list[Math.floor(Math.random() * list.length)], own: false } : null;
   }
   function play(url) {
@@ -64,22 +57,59 @@
   }
 
   // tanınmayan cümle: sıcak, yumuşak soluma
-  const FREE = () => ({ label: 'Genel (sevgi tonu)', dog: ['laughSoft'],
+  const FREE = () => ({ label: 'Genel (sevgi tonu)', dog: ['pant'], cue: null,
     tip: 'Odin cümleyi değil sesi tanır. Aynı durumda hep aynı şeyi söylersen, çalınan köpek sesini o durumla eşleştirir.' });
+  let current = null;
   async function translate(text) {
     const k = intentOf(text), it = k === 'free' ? FREE() : INTENTS[k];
+    current = k;
     $('#tOut').hidden = false;
     $('#tHeard').textContent = `“${text}”`;
     $('#tIntent').textContent = it.label;
+    const cue = k !== 'free' ? await window.OdinSounds?.getCue(k) : null;
     const own = window.OdinSounds?.ownCount() || 0;
-    $('#tDog').textContent = it.dog.map(d => DOGNAME[d]).join(' + ') + (own ? ' (Odin\'in kendi sesi varsa o)' : ' (gerçek köpek kaydı)');
+    $('#tDog').textContent = cue ? 'senin kaydettiğin ses' : it.dog.map(d => DOGNAME[d]).join(' + ') + (own ? ' (varsa Odin\'in kendi sesi)' : ' (gerçek köpek kaydı)');
     $('#tTip').textContent = it.tip;
+    $('#tCue').hidden = !it.cue;
+    if (it.cue) {
+      $('#tCueHint').textContent = `Odin'in gerçekten tanıyacağı ses: ${it.cue}. Bas, basılı tutarken sesi çıkar, bırak.`;
+      $('#tCueRec').textContent = cue ? `"${it.label}" sesini yeniden kaydet` : `"${it.label}" için ses kaydet`;
+      $('#tCueDel').hidden = !cue;
+    }
     window.OdinMute?.(60000);
-    await playDog(it.dog);   // Odin yalnız köpek sesi duyar
+    if (cue) await play(URL.createObjectURL(cue));
+    else await playDog(it.dog);   // Odin yalnız köpek sesi duyar
     window.OdinMute?.(500);
   }
+
+  // konu için gerçek ses kaydı (basılı tut)
+  let crec = null;
+  async function cueStart() {
+    if (crec || !current || current === 'free') return;
+    try {
+      const st = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+      const mr = new MediaRecorder(st), parts = [], k = current;
+      mr.ondataavailable = e => e.data.size && parts.push(e.data);
+      mr.onstop = async () => {
+        st.getTracks().forEach(t => t.stop());
+        const blob = new Blob(parts, { type: mr.mimeType || 'audio/webm' });
+        crec = null; $('#tCueRec').classList.remove('rec');
+        if (blob.size > 2000) { await window.OdinSounds?.putCue(k, blob); $('#tCueRec').textContent = 'Kaydedildi. Artık bu konu için bu ses çalacak'; $('#tCueDel').hidden = false; }
+        else $('#tCueRec').textContent = 'Çok kısa oldu, basılı tutarak tekrar dene';
+      };
+      crec = { mr, t: setTimeout(cueStop, 6000) };
+      window.OdinMute?.(7000);
+      mr.start(); $('#tCueRec').classList.add('rec'); $('#tCueRec').textContent = 'Kaydediyor… sesi çıkar, sonra bırak';
+    } catch { $('#tCueRec').textContent = 'Mikrofon izni yok'; }
+  }
+  function cueStop() { if (crec && crec.mr.state === 'recording') { clearTimeout(crec.t); crec.mr.stop(); } }
+  const cb = $('#tCueRec');
+  cb.onpointerdown = e => { e.preventDefault(); cueStart(); };
+  cb.onpointerup = cb.onpointerleave = cb.onpointercancel = cueStop;
+  cb.oncontextmenu = e => e.preventDefault();
+  $('#tCueDel').onclick = async () => { if (current) { await window.OdinSounds?.delCue(current); $('#tCueDel').hidden = true; $('#tCueRec').textContent = 'Silindi. Köpek kaydı çalacak'; } };
   const wait = ms => new Promise(r => setTimeout(r, ms));
-  const DOGNAME = { laugh: 'köpek gülmesi', laughSoft: 'yumuşak soluma', playbark: 'oyun havlaması', yip: 'çağrı havlaması', sharp: 'kısa sert havlama', sigh: 'sakin iç çekme' };
+  const DOGNAME = { play: 'neşeli oyun havlaması', whine: 'sevgi inlemesi', pant: 'köpek gülmesi (soluma)', sigh: 'sakin iç çekme', attn: 'çağrı havlaması', sharp: 'kısa sert havlama', food: 'mama dilenme havlaması', excited: 'heyecanlı seri havlama', snore: 'horlama', grunt: 'memnun homurtu', woof: 'tek kalın havlama' };
 
   // ---------- konuşma tanıma ----------
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;

@@ -125,6 +125,8 @@ details p { max-width: 65ch }
 .install code { font: .95rem var(--mono); background: color-mix(in srgb, var(--accent-ink) 12%, transparent); padding: 6px 10px; border-radius: 8px; align-self: flex-start }
 .install button, .install .btn { background: var(--accent-ink); color: var(--accent); border: 0; border-radius: 12px; padding: 14px; font: 700 1.05rem var(--display); text-align: center; text-decoration: none }
 .install .ghost { background: transparent; color: var(--accent-ink); border: 2px solid var(--accent-ink) }
+.cue { display: flex; flex-direction: column; gap: 8px; margin-top: 10px }
+.cue .row button { flex: 1 1 auto }
 #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-size: .9rem; max-width: calc(100% - 32px); z-index: 5 }
 </style>
 </head>
@@ -198,6 +200,13 @@ details p { max-width: 65ch }
           <dt>Odin'e çalınan</dt><dd id="tDog"></dd>
         </dl>
         <p class="note" id="tTip"></p>
+        <div id="tCue" class="cue" hidden>
+          <p class="note" id="tCueHint"></p>
+          <div class="row">
+            <button id="tCueRec" type="button" class="recb">Ses kaydet</button>
+            <button id="tCueDel" type="button" hidden>Kaydı sil</button>
+          </div>
+        </div>
       </div>
       <small style="color:var(--muted)">Sen konuşursun, Odin sadece köpek sesi duyar. Önce Odin'in kendi kaydedilmiş sesleri, yoksa gerçek köpek kayıtları çalınır.</small>
     </div>
