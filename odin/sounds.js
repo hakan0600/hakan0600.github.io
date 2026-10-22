@@ -185,5 +185,38 @@
   $('#praise').checked = opt.praise; $('#praise').onchange = e => { opt.praise = e.target.checked; save('praise', opt.praise); };
   render();
 
-  window.OdinSounds = { respond, phrase, startMusic, stopMusic, has: k => !!clips[k] };
+  // ---------- Odin'in kendi sesleri ----------
+  // Dinlerken yakalanan gerçek havlama/soluma kayıtları; anlam başına en yeni 4 tanesi saklanır.
+  const OWN_MAX = 4;
+  const ownIndex = () => { try { return JSON.parse(localStorage.getItem('odin.own') || '{}'); } catch { return {}; } };
+  function wav16(x) {
+    const b = new ArrayBuffer(44 + x.length * 2), v = new DataView(b);
+    const str = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+    str(0, 'RIFF'); v.setUint32(4, 36 + x.length * 2, true); str(8, 'WAVEfmt '); v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 16000, true); v.setUint32(28, 32000, true);
+    v.setUint16(32, 2, true); v.setUint16(34, 16, true); str(36, 'data'); v.setUint32(40, x.length * 2, true);
+    for (let i = 0; i < x.length; i++) v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, x[i])) * 32767, true);
+    return new Blob([b], { type: 'audio/wav' });
+  }
+  async function saveOwn(m, w) {
+    if (!w || w.length < 1600) return;
+    const x = w.slice(0, 16000 * 3);
+    let pk = 0; for (const s of x) pk = Math.max(pk, Math.abs(s));
+    if (pk < 0.02) return;
+    const g = 0.7 / pk, fade = 160;
+    for (let i = 0; i < x.length; i++) x[i] *= g * Math.min(1, i / fade, (x.length - 1 - i) / fade);
+    const key = `own:${m}:${Date.now()}`, idx = ownIndex();
+    (idx[m] ||= []).push(key);
+    const drop = idx[m].length > OWN_MAX ? idx[m].splice(0, idx[m].length - OWN_MAX) : [];
+    try { localStorage.setItem('odin.own', JSON.stringify(idx)); } catch {}
+    await tx('readwrite', s => { s.put(wav16(x), key); drop.forEach(k => s.delete(k)); }).catch(() => {});
+  }
+  async function getOwn(ms) {
+    const idx = ownIndex(), keys = ms.flatMap(m => idx[m] || []);
+    if (!keys.length) return null;
+    return tx('readonly', s => s.get(keys[Math.floor(Math.random() * keys.length)])).catch(() => null);
+  }
+  const ownCount = () => Object.values(ownIndex()).reduce((a, l) => a + l.length, 0);
+
+  window.OdinSounds = { respond, phrase, startMusic, stopMusic, has: k => !!clips[k], saveOwn, getOwn, ownCount };
 })();

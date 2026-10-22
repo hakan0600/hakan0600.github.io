@@ -2,7 +2,7 @@
    Köpekler kelimenin anlamını değil tonu, kısalığı, tekrarı ve tanıdık sesleri anlar. Söyleneni niyete çevirir
    (övgü, sevgi, oyun, sakin, gel, hayır, mama, gezme, otur), sonra:
    1) köpeğe yönelik tonda kısa bir işaret cümlesi (varsa sahibin kaydı),
-   2) isteğe bağlı köpek sesi: Odin'in kendi perdesinde oyun havlaması, köpek gülmesi (oyun soluması), iç çekme.
+   2) isteğe bağlı gerçek köpek sesi: önce Odin'in kendi kaydı, yoksa Barkopedia veri setinden gerçek kayıt.
    Alarm/tehdit havlaması bilerek yok: köpeği strese sokar. */
 'use strict';
 (() => {
@@ -13,7 +13,7 @@
     play:   { label: 'Oyun',     words: /oyna|oyun|top|koş|yakala|getir|hadi/, say: n => `${n}! Hadi hadi! Oyun!`, pitch: 1.8, rate: 1.05, clip: 'play', dog: ['laugh', 'playbark'], tip: 'Kollarını aç, öne eğil: köpeklerin oyun selamını taklit et.' },
     calm:   { label: 'Sakin',    words: /sakin|geçti|korkma|yolunda|şşş|sus artık/, say: n => `Şşşş... sakin ${n}. Sakin.`, pitch: 0.9, rate: 0.7, clip: 'calm', dog: ['sigh'], tip: 'Alçak ve yavaş konuş, hareketlerini yavaşlat, yüzüne eğilme.' },
     come:   { label: 'Gel',      words: /\bgel\b|\bgel gel|buraya|yanıma/, say: n => `${n}, gel! Gel gel gel!`, pitch: 1.7, rate: 1.0, dog: ['yip'], tip: 'Geldiğinde mutlaka ödüllendir; "gel" sonrası asla azarlama.' },
-    no:     { label: 'Hayır',    words: /hayır|yapma|\bdur\b|bırak|olmaz|yasak|in aşağı|kes şunu/, say: () => 'Hayır.', pitch: 0.75, rate: 0.9, dog: ['huff'], tip: 'Tek kelime, alçak ve kısa. Bağırma; sonra doğru davranışı göster ve öv.' },
+    no:     { label: 'Hayır',    words: /hayır|yapma|\bdur\b|bırak|olmaz|yasak|in aşağı|kes şunu/, say: () => 'Hayır.', pitch: 0.75, rate: 0.9, dog: [], tip: 'Tek kelime, alçak ve kısa. Bağırma; sonra doğru davranışı göster ve öv.' },
     food:   { label: 'Mama',     words: /mama|yemek|ödül|acık|kemik/, say: n => `Mama mı ${n}? Mama!`, pitch: 1.6, rate: 0.95, dog: ['playbark'], tip: 'Mamadan önce "otur" iste: sakin bekleyince ver.' },
     walk:   { label: 'Gezme',    words: /gez|dışarı|yürü|tasma|park|sokak|tuvalet|çiş/, say: n => `Gezmeye mi gidiyoruz ${n}? Hadi gezmeye!`, pitch: 1.7, rate: 1.0, dog: ['laugh'], tip: 'Tasmayı göstererek aynı kelimeyi kullan; Odin kelimeyi tasmayla eşleştirir.' },
     sleep:  { label: 'Uyku',     words: /uyu|iyi geceler|yat(ağa|alım)|dinlen|uykun/, say: n => `İyi geceler ${n}... uyu bakalım.`, pitch: 1.0, rate: 0.65, clip: 'calm', dog: ['sigh'], tip: 'Yatmadan önce hep aynı sözü ve aynı sakin tonu kullan; rutin Odin\'i rahatlatır.' },
@@ -32,49 +32,36 @@
     return 'free';
   };
   const name = () => ($('#name').value.trim() || 'Odin');
-  const odinPitch = () => {
-    try { const a = JSON.parse(localStorage.getItem('odin.pitches') || '[]'); if (a.length >= 5) return [...a].sort((x, y) => x - y)[a.length >> 1]; } catch {}
-    return 700; // Pomeranian için başlangıç tahmini; dinledikçe Odin'in kendi perdesine oturur
-  };
   let withDog = (() => { try { return JSON.parse(localStorage.getItem('odin.talk.dog') ?? 'true'); } catch { return true; } })();
 
-  // ---------- köpek sesleri (sentez) ----------
-  let out;
-  const ac = () => { if (!out) out = new AudioContext(); if (out.state === 'suspended') out.resume(); return out; };
-  const noiseBuf = c => { const b = c.createBuffer(1, c.sampleRate, c.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; return b; };
-  let nb = null;
-  function noise(c, t, dur, f, q, peak, att = 0.02) {
-    nb ||= noiseBuf(c);
-    const s = c.createBufferSource(), bp = c.createBiquadFilter(), g = c.createGain();
-    s.buffer = nb; s.loop = true; bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q;
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + att); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    s.connect(bp).connect(g).connect(c.destination); s.start(t, Math.random()); s.stop(t + dur + 0.05);
-  }
-  function bark(c, t, f0, dur, vol) {
-    const o = c.createOscillator(), f1 = c.createBiquadFilter(), f2 = c.createBiquadFilter(), lp = c.createBiquadFilter(), g = c.createGain();
-    o.type = 'sawtooth';
-    o.frequency.setValueAtTime(f0 * 0.8, t); o.frequency.linearRampToValueAtTime(f0 * 1.15, t + dur * 0.3); o.frequency.linearRampToValueAtTime(f0 * 0.75, t + dur);
-    f1.type = 'peaking'; f1.frequency.value = 1100; f1.gain.value = 10; f1.Q.value = 2;
-    f2.type = 'peaking'; f2.frequency.value = 2600; f2.gain.value = 8; f2.Q.value = 3;
-    lp.type = 'lowpass'; lp.frequency.value = 4500;
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(f1).connect(f2).connect(lp).connect(g).connect(c.destination); o.start(t); o.stop(t + dur + 0.05);
-    noise(c, t, dur * 0.8, 2200, 1.2, vol * 0.5, 0.008);
-  }
-  const DOG = {
-    // köpek gülmesi: nefes verme ağırlıklı, hızlı, sesli soluma (Simonet 2001)
-    laugh: (c, t) => { for (let i = 0; i < 8; i++) noise(c, t + i * 0.2, i % 2 ? 0.1 : 0.14, i % 2 ? 1400 : 1800, 1.4, i % 2 ? 0.12 : 0.22); return 1.7; },
-    laughSoft: (c, t) => { for (let i = 0; i < 6; i++) noise(c, t + i * 0.26, 0.16, 1500, 1.2, 0.1); return 1.6; },
-    playbark: (c, t, f) => { bark(c, t, f * 1.1, 0.11, 0.35); bark(c, t + 0.3, f * 1.2, 0.1, 0.3); return 0.5; },
-    yip: (c, t, f) => { bark(c, t, f * 1.35, 0.07, 0.28); bark(c, t + 0.18, f * 1.4, 0.07, 0.28); return 0.3; },
-    sigh: (c, t) => { noise(c, t, 1.3, 700, 0.8, 0.16, 0.35); noise(c, t + 0.05, 1.1, 1600, 1, 0.05, 0.4); return 1.4; },
-    huff: (c, t) => { noise(c, t, 0.14, 900, 0.9, 0.3, 0.01); return 0.2; },
+  // ---------- köpek sesleri (gerçek kayıtlar) ----------
+  // Önce Odin'in kendi kaydı (dinlerken yakalananlar), yoksa Barkopedia veri setinden seçilmiş gerçek köpek kayıtları.
+  const SRC = {
+    playbark: { own: ['play', 'attn', 'food'], stock: 'play' },
+    yip:      { own: ['attn', 'play'], stock: 'attn' },
+    laugh:    { own: ['laugh'], stock: 'laugh' },
+    laughSoft:{ own: ['laugh', 'sigh', 'grunt'], stock: 'laugh' },
+    sigh:     { own: ['sigh', 'grunt'], stock: 'sigh' },
   };
-  function playDog(list) {
-    if (!list.length) return 0;
-    const c = ac(); let t = c.currentTime + 0.05; const f = odinPitch();
-    list.forEach(k => { t += DOG[k](c, t, f) + 0.25; });
-    return (t - c.currentTime) * 1000;
+  let stock = null;
+  const stockList = () => stock ||= fetch('sesler/index.json').then(r => r.json()).catch(() => ({}));
+  async function clipFor(k) {
+    const src = SRC[k]; if (!src) return null;
+    const own = await window.OdinSounds?.getOwn(src.own);
+    if (own) return { url: URL.createObjectURL(own), own: true };
+    const list = (await stockList())[src.stock] || [];
+    return list.length ? { url: 'sesler/' + list[Math.floor(Math.random() * list.length)], own: false } : null;
+  }
+  function play(url) {
+    return new Promise(res => {
+      const a = new Audio(url); a.onended = a.onerror = () => res(); a.play().catch(() => res());
+      setTimeout(res, 6000);
+    });
+  }
+  async function playDog(list) {
+    let usedOwn = false;
+    for (const k of list) { const c = await clipFor(k); if (c) { usedOwn ||= c.own; await play(c.url); await wait(150); } }
+    return usedOwn;
   }
 
   function speak(it) {
@@ -98,17 +85,18 @@
     $('#tHeard').textContent = `“${text}”`;
     $('#tIntent').textContent = it.label;
     $('#tSay').textContent = it.clip && window.OdinSounds?.has(it.clip) ? 'Senin kayıtlı sesin' : it.say(name());
-    $('#tDog').textContent = withDog && it.dog.length ? it.dog.map(d => DOGNAME[d]).join(' + ') : '—';
+    const own = window.OdinSounds?.ownCount() || 0;
+    $('#tDog').textContent = withDog && it.dog.length ? it.dog.map(d => DOGNAME[d]).join(' + ') + (own ? ' (Odin\'in kendi sesi varsa o)' : ' (gerçek köpek kaydı)') : '—';
     $('#tTip').textContent = it.tip;
     window.OdinMute?.(60000);
-    if (withDog && k !== 'no' && k !== 'calm') await wait(playDog(it.dog));   // önce köpek sesiyle dikkatini çek
+    if (withDog && k !== 'no' && k !== 'calm') await playDog(it.dog);   // önce köpek sesiyle dikkatini çek
     if (it.clip && window.OdinSounds?.has(it.clip)) { await window.OdinSounds.phrase(it.clip); await wait(2500); }
     else await speak(it);
-    if (withDog && (k === 'no' || k === 'calm')) await wait(playDog(it.dog)); // sakin/hayır: ses sonra, yumuşak kapanış
+    if (withDog && k === 'calm') await playDog(it.dog); // sakin: ses sonra, yumuşak kapanış
     window.OdinMute?.(500);
   }
   const wait = ms => new Promise(r => setTimeout(r, ms));
-  const DOGNAME = { laugh: 'köpek gülmesi', laughSoft: 'yumuşak soluma', playbark: 'oyun havlaması', yip: 'çağrı havlaması', sigh: 'sakin iç çekme', huff: 'kısa burun sesi' };
+  const DOGNAME = { laugh: 'köpek gülmesi', laughSoft: 'yumuşak soluma', playbark: 'oyun havlaması', yip: 'çağrı havlaması', sigh: 'sakin iç çekme' };
 
   // ---------- konuşma tanıma ----------
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;

@@ -23,6 +23,8 @@ const MEANINGS = {
   need:    { t: 'Huzursuz: dışarı çıkmak ya da yanına gelmeni istiyor.', s: 'Huzursuz. Dışarı çıkmak ya da yanına gelmeni istiyor.' },
   lonely:  { t: 'Uluyor: seni çağırıyor, yalnız kaldı.', s: 'Seni çağırıyor, yalnız kaldım diyor.' },
   pain:    { t: 'Acıdı ya da korktu! Hemen kontrol et.', s: 'Dikkat! Acıdı ya da korktu. Hemen kontrol et.' },
+  shower:  { t: 'Rahatsız: bu durumdan hoşlanmıyor, bitsin istiyor.', s: 'Rahatsız. Bitsin istiyor diyor.' },
+  rest:    { t: 'Rahat; ufak bir tepki, önemli bir şey yok.', s: 'Rahat, önemli bir şey yok.' },
   door:    { t: 'Kapı çaldı, sana haber veriyor.', s: 'Kapı çaldı, haber veriyor.' },
   laugh:   { t: '"He he he": köpek gülmesi. Keyfi yerinde, oyun istiyor.', s: 'Gülüyor! Keyfi yerinde, oyun oynamak istiyor.' },
   hot:     { t: 'Uzun süredir soluyor: sıcak, susamış ya da stresli olabilir. Su ver, serin yere al.', s: 'Uzun süredir soluyor. Su ver ve serin bir yere al.', lv: 'alert' },
@@ -195,6 +197,30 @@ function pitchOf(x) {
 
 const median = a => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); return s[s.length >> 1]; };
 
+// Barkopedia veri setiyle eğitilmiş anlam modeli (YAMNet gömmesi -> 6 etkinlik). Zayıf ama gerçek veriye dayalı bir sinyal.
+let ACT = null;
+fetch('model/anlam.json').then(r => r.json()).then(j => { ACT = j; }).catch(() => {});
+const ACT_TO = { alarm: 'alarm', attn: 'attn', play: 'play', food: 'food', shower: 'shower', rest: 'rest' };
+const ACT_TR = { alarm: 'alarm', attn: 'ilgi', play: 'oyun', food: 'mama', shower: 'rahatsız', rest: 'rahat' };
+function actProbs(segs) {
+  if (!ACT || !model || !segs.length) return null;
+  const K = ACT.classes.length, acc = new Float64Array(K);
+  for (const seg of segs) {
+    let x = seg;
+    if (x.length < 15600) { x = new Float32Array(15600); x.set(seg); }
+    const emb = tf.tidy(() => {
+      let outs = model.execute(tf.tensor1d(x)); if (!Array.isArray(outs)) outs = [outs];
+      return outs.find(o => o.shape.at(-1) === 1024).mean(0).dataSync();
+    });
+    const z = ACT.W.map((w, c) => { let s = ACT.b[c]; for (let i = 0; i < 1024; i++) s += w[i] * emb[i]; return s; });
+    const mx = Math.max(...z), ex = z.map(v => Math.exp(v - mx)), sum = ex.reduce((a, b) => a + b);
+    ex.forEach((v, c) => { acc[c] += Math.log(v / sum + 1e-6); });
+  }
+  // parçaların geometrik ortalaması
+  const z = [...acc].map(v => v / segs.length), mx = Math.max(...z), ex = z.map(v => Math.exp(v - mx)), sum = ex.reduce((a, b) => a + b);
+  return Object.fromEntries(ACT.classes.map((c, i) => [c, ex[i] / sum]));
+}
+
 async function analyse(e) {
   const pre = Math.round(sr * 0.15);
   const a = Math.max(e.start - pre, tAbs - ringLen + 1), b = e.barks.at(-1).e + pre;
@@ -228,7 +254,7 @@ async function analyse(e) {
     const dogAny = Math.max(p[CLS.dog], p[CLS.bark], p[CLS.yip], p[CLS.howl], p[CLS.bowwow], p[CLS.growl], p[CLS.whimperDog]);
     lastDoor = Math.max(p[CLS.doorbell], p[CLS.dingdong], p[CLS.knock]) > 0.2 ? performance.now() : lastDoor;
     const body = bodyOf(p);
-    if (body && body.v > dogAny) { onBody(body.k, body.v); return; }
+    if (body && body.v > dogAny) { onBody(body.k, body.v, w); return; }
     if (dogAny < 0.12) { drawIgnored(p[CLS.speech] > 0.3 ? 'İnsan sesi, köpek değil' : 'Köpek sesi değil'); return; }
   }
   const ty = p ? {
@@ -241,9 +267,22 @@ async function analyse(e) {
 
   const f = { count, rate, meanDur, pitch, rel, loud, ty };
   const vec = featVec(f);
+  // eğitimdeki gibi: havlama serisini en fazla 3 sn'lik parçalarla ver (gömme = parçadaki karelerin ortalaması)
+  const s0 = Math.max(0, Math.round((barks[0].s - a) / sr * SR16) - 800), s1 = Math.min(w.length, Math.round((barks.at(-1).e - a) / sr * SR16) + 800);
+  const segs = []; for (let i = s0; i < s1 && segs.length < 3; i += 48000) segs.push(w.subarray(i, Math.min(s1, i + 48000)));
+  const ap = actProbs(segs);
   let res = learned(vec) || rules(f);
+  let apTxt = '';
+  if (ap) {
+    const [ak, av] = Object.entries(ap).sort((x, y) => y[1] - x[1])[0];
+    apTxt = ` · veri seti: ${ACT_TR[ak]} %${Math.round(av * 100)}`;
+    // ses türü kuralları (hırlama, uluma, inleme, acı) ve kişisel öğrenme önceliklidir
+    const typeRule = ['threat', 'lonely', 'need', 'pain'].includes(res.m);
+    if (!res.learned && !typeRule && av >= 0.45 && av > res.c) res = { m: ACT_TO[ak], c: av, data: true };
+  }
   if (performance.now() - lastDoor < 8000 && (res.m === 'alarm' || res.m === 'attn')) res = { m: 'door', c: 0.8 };
-  report(res, `${count} ses · ${f.rate.toFixed(1)}/sn${f.pitch ? ' · ' + Math.round(f.pitch) + ' Hz' : ''}`, ty, vec);
+  if (res.c >= 0.4 && res.m !== 'threat' && res.m !== 'pain') window.OdinSounds?.saveOwn(res.m, w); // Odin'in gerçek sesi, 'Odin'e söyle' için
+  report(res, `${count} ses · ${f.rate.toFixed(1)}/sn${f.pitch ? ' · ' + Math.round(f.pitch) + ' Hz' : ''}${apTxt}`, ty, vec);
 }
 
 // ---------- havlama dışı sesler ----------
@@ -257,12 +296,12 @@ function bodyOf(p) {
   }
   return best;
 }
-function onBody(k, v) {
+function onBody(k, v, w) {
   const now = performance.now(), b = body[k] ||= { times: [], start: now, last: -1e9, said: {} };
   if (now - b.last > 5000) { b.start = now; b.said = {}; }  // yeni bölüm
   b.last = now; b.times.push(now); b.times = b.times.filter(t => now - t < 300000);
   const dur = (now - b.start) / 1000, n5 = b.times.length;
-  const once = (m, c) => { if (!b.said[m]) { b.said[m] = 1; report({ m, c }, `${dur < 1 ? 'tek' : Math.round(dur) + ' sn'} · 5 dk'da ${n5} kez`, { [k]: v }); } };
+  const once = (m, c) => { if (!b.said[m]) { b.said[m] = 1; if (w && (m === 'laugh' || m === 'sigh' || m === 'grunt')) window.OdinSounds?.saveOwn(m, w); report({ m, c }, `${dur < 1 ? 'tek' : Math.round(dur) + ' sn'} · 5 dk'da ${n5} kez`, { [k]: v }); } };
   switch (k) {
     case 'pant': if (dur >= 60) once('hot', v); else if (dur >= 2 && dur < 30) once('laugh', v); break;
     case 'sneeze': if (n5 >= 6) once('sneezes', v); else once('playsneeze', v); break;
@@ -288,7 +327,7 @@ function scan() {
     return Array.from(outs.find(o => o.shape.at(-1) === 521).max(0).dataSync());
   });
   if (Math.max(p[CLS.doorbell], p[CLS.dingdong], p[CLS.knock]) > 0.2) lastDoor = performance.now();
-  const bd = bodyOf(p); if (bd) onBody(bd.k, bd.v);
+  const bd = bodyOf(p); if (bd) onBody(bd.k, bd.v, w);
 }
 setInterval(scan, 1000);
 
@@ -303,7 +342,8 @@ function guessType(d, rel) {
 function rules(f) {
   const { ty, count, rate, meanDur, rel } = f;
   const top = Object.entries(ty).sort((x, y) => y[1] - x[1])[0][0];
-  if (top === 'growl' || (ty.growl > 0.25 && rel < 0)) return { m: 'threat', c: ty.growl };
+  // oyun sırasında hafif hırlama normaldir; tehdit için hırlama baskın ya da güçlü ve belirgin biçimde alçak olmalı
+  if (top === 'growl' || (ty.growl > 0.4 && rel < -0.3)) return { m: 'threat', c: ty.growl };
   if (top === 'howl') return { m: 'lonely', c: ty.howl };
   if (top === 'whimper') return { m: 'need', c: ty.whimper };
   if (top === 'yip' && count <= 2 && f.loud > 20) return { m: 'pain', c: ty.yip };
@@ -351,7 +391,7 @@ let lastVec = null, lastId = null;
 
 function report(res, meta, ty, vec = null) {
   const M = MEANINGS[res.m], lv = M.lv || 'info';
-  const item = { id: Date.now(), at: new Date().toISOString(), m: res.m, c: res.c, learned: !!res.learned, meta, ty, v: vec };
+  const item = { id: Date.now(), at: new Date().toISOString(), m: res.m, c: res.c, learned: !!res.learned, data: !!res.data, meta, ty, v: vec };
   S.history.unshift(item); S.history = S.history.slice(0, 60); store.set('history', S.history);
   lastVec = vec; lastId = item.id;
   if (lv !== 'quiet' || S.quietSpeak) {
@@ -366,7 +406,7 @@ function renderNow(it) {
   const M = MEANINGS[it.m];
   $('#now').hidden = false; $('#idle').hidden = true;
   $('#nowText').textContent = M.t;
-  $('#nowMeta').textContent = `${it.meta || ''} · ${it.learned ? 'senin öğrettiğine göre' : 'kurallara göre'} · güven %${Math.round(it.c * 100)}`;
+  $('#nowMeta').textContent = `${it.meta || ''} · ${it.learned ? 'senin öğrettiğine göre' : it.data ? 'veri setine göre' : 'kurallara göre'} · güven %${Math.round(it.c * 100)}`;
   $('#nowCard').dataset.m = it.m;
   const bars = $('#types'); bars.textContent = '';
   Object.entries(it.ty || {}).sort((a, b) => b[1] - a[1]).forEach(([k, v]) => {
@@ -438,7 +478,7 @@ $('#test').onclick = () => { const v = S.voice; S.voice = true; say(`${S.name}: 
 $('#ok').onclick = () => { const h = S.history.find(x => x.id === lastId); if (h) teach(h.m); };
 $('#wrong').onclick = () => { $('#fixRow').hidden = false; };
 const fx = $('#fix');
-Object.entries(MEANINGS).filter(([k]) => ['alarm','threat','play','attn','food','bored','need','lonely','pain','door'].includes(k)).forEach(([k, v]) => { const o = document.createElement('option'); o.value = k; o.textContent = v.t; fx.append(o); });
+Object.entries(MEANINGS).filter(([k]) => ['alarm','threat','play','attn','food','bored','need','lonely','pain','door','shower','rest'].includes(k)).forEach(([k, v]) => { const o = document.createElement('option'); o.value = k; o.textContent = v.t; fx.append(o); });
 $('#fixSave').onclick = () => teach(fx.value);
 $('#reset').onclick = () => { if ($('#reset').dataset.armed) { S.examples = []; S.pitches = []; S.history = []; ['examples', 'pitches', 'history'].forEach(k => store.set(k, [])); renderHistory(); $('#learnCount').textContent = 0; $('#reset').textContent = 'Öğrenileni sıfırla'; delete $('#reset').dataset.armed; toast('Sıfırlandı.'); } else { $('#reset').dataset.armed = 1; $('#reset').textContent = 'Emin misin? Tekrar dokun'; setTimeout(() => { delete $('#reset').dataset.armed; $('#reset').textContent = 'Öğrenileni sıfırla'; }, 3000); } };
 $('#learnCount').textContent = S.examples.length;

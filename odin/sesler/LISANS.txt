@@ -1,0 +1,4 @@
+Bu klasördeki köpek sesi kayıtları ve model/anlam.json, Barkopedia Dog Act/Env veri setinden
+(ArlingtonCL2, University of Texas at Arlington; https://huggingface.co/datasets/ArlingtonCL2/Barkopedia_Dog_Act_Env)
+türetilmiştir. Veri seti MIT lisansı ile yayımlanmıştır.
+Kayıtlar kısaltılmış, ses seviyesi eşitlenmiş ve MP3'e dönüştürülmüştür.
