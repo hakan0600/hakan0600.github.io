@@ -31,9 +31,6 @@
     for (const k of order) if (INTENTS[k].words.test(t)) return k;
     return 'free';
   };
-  const name = () => ($('#name').value.trim() || 'Odin');
-  let mode = (() => { try { return localStorage.getItem('odin.talk.mode') || 'mix'; } catch { return 'mix'; } })();
-  let withDog = (() => { try { return JSON.parse(localStorage.getItem('odin.talk.dog') ?? 'true'); } catch { return true; } })();
 
   // ---------- köpek sesleri (gerçek kayıtlar) ----------
   // Önce Odin'in kendi kaydı (dinlerken yakalananlar), yoksa Barkopedia veri setinden seçilmiş gerçek köpek kayıtları.
@@ -66,40 +63,19 @@
     return usedOwn;
   }
 
-  function speak(it) {
-    return new Promise(res => {
-      if (!('speechSynthesis' in window)) return res();
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(it.say(name()));
-      u.lang = 'tr-TR'; u.pitch = it.pitch; u.rate = it.rate;
-      const v = speechSynthesis.getVoices().find(v => /^tr/i.test(v.lang)); if (v) u.voice = v;
-      u.onend = u.onerror = res; speechSynthesis.speak(u);
-      setTimeout(res, 8000);
-    });
-  }
-
-  // tanınmayan cümle: kendi cümlen, köpeğe yönelik sıcak tonda, adıyla başlar
-  const FREE = text => ({ label: 'Serbest (senin cümlen)', say: n => `${n}... ${text}`, pitch: 1.5, rate: 0.8, dog: ['laughSoft'],
-    tip: 'Odin cümleyi değil tonu ve kelimeleri tanır. Aynı şeyi hep aynı kısa kelimeyle söylersen zamanla öğrenir.' });
+  // tanınmayan cümle: sıcak, yumuşak soluma
+  const FREE = () => ({ label: 'Genel (sevgi tonu)', dog: ['laughSoft'],
+    tip: 'Odin cümleyi değil sesi tanır. Aynı durumda hep aynı şeyi söylersen, çalınan köpek sesini o durumla eşleştirir.' });
   async function translate(text) {
-    const k = intentOf(text), it = k === 'free' ? FREE(text) : INTENTS[k];
+    const k = intentOf(text), it = k === 'free' ? FREE() : INTENTS[k];
     $('#tOut').hidden = false;
     $('#tHeard').textContent = `“${text}”`;
     $('#tIntent').textContent = it.label;
-    $('#tSay').textContent = mode === 'dog' ? '— (yalnız köpek sesi)' : it.clip && window.OdinSounds?.has(it.clip) ? 'Senin kayıtlı sesin' : it.say(name());
     const own = window.OdinSounds?.ownCount() || 0;
-    $('#tDog').textContent = (withDog || mode === 'dog') && it.dog.length ? it.dog.map(d => DOGNAME[d]).join(' + ') + (own ? ' (Odin\'in kendi sesi varsa o)' : ' (gerçek köpek kaydı)') : '—';
+    $('#tDog').textContent = it.dog.map(d => DOGNAME[d]).join(' + ') + (own ? ' (Odin\'in kendi sesi varsa o)' : ' (gerçek köpek kaydı)');
     $('#tTip').textContent = it.tip;
     window.OdinMute?.(60000);
-    if (mode === 'dog') {                       // sadece köpek sesi: cümle tamamen köpek seslerine çevrilir
-      await playDog(it.dog);
-    } else {
-      const calmFirst = k === 'calm' || k === 'sleep' || k === 'no';
-      if (withDog && !calmFirst) await playDog(it.dog);   // önce köpek sesiyle dikkatini çek
-      if (it.clip && window.OdinSounds?.has(it.clip)) { await window.OdinSounds.phrase(it.clip); await wait(2500); }
-      else await speak(it);
-      if (withDog && calmFirst && k !== 'no') await playDog(it.dog); // sakin: köpek sesi sonra, yumuşak kapanış
-    }
+    await playDog(it.dog);   // Odin yalnız köpek sesi duyar
     window.OdinMute?.(500);
   }
   const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -126,11 +102,5 @@
   };
   $('#tForm').onsubmit = e => { e.preventDefault(); const v = $('#tText').value.trim(); if (v) translate(v); };
   document.querySelectorAll('[data-say]').forEach(b => b.onclick = () => { $('#tText').value = b.dataset.say; translate(b.dataset.say); });
-  document.querySelectorAll('input[name=tMode]').forEach(r => {
-    r.checked = r.value === mode;
-    r.onchange = () => { mode = r.value; try { localStorage.setItem('odin.talk.mode', mode); } catch {} $('#tDogRow').hidden = mode === 'dog'; };
-  });
-  $('#tDogRow').hidden = mode === 'dog';
-  $('#tDogOn').checked = withDog;
-  $('#tDogOn').onchange = e => { withDog = e.target.checked; try { localStorage.setItem('odin.talk.dog', JSON.stringify(withDog)); } catch {} };
+
 })();
