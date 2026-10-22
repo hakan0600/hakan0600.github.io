@@ -118,6 +118,13 @@ details p { max-width: 65ch }
 .modes { display: flex; flex-direction: column; gap: 8px }
 .modes label { display: flex; gap: 10px; align-items: center; font-weight: 500; font-size: .92rem }
 .modes input { width: 20px; height: 20px; accent-color: var(--accent) }
+.install { display: flex; flex-direction: column; gap: 10px; background: var(--accent); color: var(--accent-ink); border-radius: 18px; padding: 18px }
+.install strong { font: 700 1.2rem var(--display) }
+.install p, .install ol { margin: 0; line-height: 1.45 }
+.install ol { padding-left: 20px; display: flex; flex-direction: column; gap: 6px }
+.install code { font: .95rem var(--mono); background: color-mix(in srgb, var(--accent-ink) 12%, transparent); padding: 6px 10px; border-radius: 8px; align-self: flex-start }
+.install button, .install .btn { background: var(--accent-ink); color: var(--accent); border: 0; border-radius: 12px; padding: 14px; font: 700 1.05rem var(--display); text-align: center; text-decoration: none }
+.install .ghost { background: transparent; color: var(--accent-ink); border: 2px solid var(--accent-ink) }
 #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-size: .9rem; max-width: calc(100% - 32px); z-index: 5 }
 </style>
 </head>
@@ -128,6 +135,8 @@ details p { max-width: 65ch }
     <h1>Odin Tercüman<small>Pomeranian ses çevirmeni · 3 yaşında</small></h1>
     <span id="status" data-k="off">Kapalı</span>
   </header>
+
+  <div id="install" class="install" hidden></div>
 
   <button id="go" type="button">Dinlemeye başla</button>
 
@@ -249,5 +258,6 @@ details p { max-width: 65ch }
 <script src="app.js"></script>
 <script src="sounds.js"></script>
 <script src="talk.js"></script>
+<script src="install.js"></script>
 </body>
 </html>
