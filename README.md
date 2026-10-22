@@ -72,3 +72,4 @@ Notlar:
 | `telefon_izni.bat`, `telefon_izni.ps1` | Telefon için güvenlik duvarı izni (bir kez) |
 | `tests/parser.test.html` | Ayrıştırıcı testleri (Edge'de aç, "24/24 geçti" yazmalı) |
 | `tests/fixtures/` | OCR deneme görselleri |
+
